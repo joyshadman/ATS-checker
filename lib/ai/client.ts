@@ -1,4 +1,4 @@
-import { getServerBaseURL } from "@/lib/auth/url";
+import { getBaseURL } from "@/lib/env";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MODEL = "openai/gpt-oss-120b:free";
@@ -55,7 +55,7 @@ async function fetchModel<T>(
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
-        "HTTP-Referer": getServerBaseURL(),
+        "HTTP-Referer": getBaseURL(),
         "X-Title": "ATS Resume Checker",
       },
       body: JSON.stringify({

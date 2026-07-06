@@ -2,7 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "@/lib/prisma/db";
 import { nextCookies } from "better-auth/next-js";
-import { getServerBaseURL } from "@/lib/auth/url";
+import { getBaseURL } from "@/lib/env";
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -13,13 +13,14 @@ if (!googleClientId || !googleClientSecret) {
   );
 }
 
-const baseURL = getServerBaseURL();
-
-console.log(`[auth] Better Auth baseURL: ${baseURL}`);
-if (googleClientId) console.log(`[auth] Google OAuth client ID: ${googleClientId.slice(0, 8)}...`);
+console.log(`[auth] Google OAuth client ID: ${googleClientId?.slice(0, 8) ?? "not set"}...`);
 
 export const auth = betterAuth({
-  baseURL,
+  baseURL: {
+    allowedHosts: ["localhost:3000", "ats-checker-tan.vercel.app", "*.vercel.app"],
+    fallback: getBaseURL(),
+    protocol: "auto",
+  },
   secret: process.env.BETTER_AUTH_SECRET,
   database: prismaAdapter(prisma, {
     provider: "postgresql",
@@ -41,6 +42,12 @@ export const auth = betterAuth({
         },
       }
     : {}),
+  advanced: {
+    useSecureCookies: process.env.NODE_ENV === "production",
+    defaultCookieAttributes: {
+      sameSite: "lax",
+    },
+  },
   logger: {
     disabled: false,
     level: "info",
