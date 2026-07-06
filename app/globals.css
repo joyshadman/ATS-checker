@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-card: var(--card);
+  --color-card-hover: var(--card-hover);
+  --color-surface: var(--surface);
+}
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --border: #e2e8f0;
+  --muted: #64748b;
+  --card: #ffffff;
+  --card-hover: #f8fafc;
+  --surface: #f1f5f9;
+}
+
+.dark {
+  --background: #09090b;
+  --foreground: #fafafa;
+  --border: #27272a;
+  --muted: #a1a1aa;
+  --card: #18181b;
+  --card-hover: #27272a;
+  --surface: #18181b;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+}
+
+@layer utilities {
+  .bg-gradient-primary {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  }
+  .bg-gradient-accent {
+    background: linear-gradient(135deg, #06b6d4, #0ea5e9);
+  }
+  .bg-gradient-success {
+    background: linear-gradient(135deg, #10b981, #34d399);
+  }
+  .bg-gradient-warning {
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  }
+  .bg-gradient-error {
+    background: linear-gradient(135deg, #f43f5e, #fb7185);
+  }
+  .bg-gradient-card {
+    background: linear-gradient(135deg, #6366f108, #8b5cf608);
+  }
+  .bg-gradient-hero {
+    background: linear-gradient(135deg, #6366f1, #8b5cf1, #06b6d4);
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .shadow-card {
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+  }
+  .shadow-card-hover {
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.06), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+  }
+  .shadow-float {
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.04);
+  }
+}

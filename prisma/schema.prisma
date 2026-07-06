@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String?
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  accounts     Account[]
+  sessions     Session[]
+  resumes      Resume[]
+  coverLetters CoverLetter[]
+}
+
+model Account {
+  id              String   @id @default(cuid())
+  userId          String
+  accountId       String
+  providerId      String
+  accessToken     String?
+  refreshToken    String?
+  accessTokenExpiresAt DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope           String?
+  idToken         String?
+  password        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Resume {
+  id           String   @id @default(cuid())
+  userId       String
+  title        String
+  originalText String?
+  improvedText String?
+  atsScore     Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analyses   Analysis[]
+  interviews Interview[]
+}
+
+model CoverLetter {
+  id           String   @id @default(cuid())
+  userId       String
+  title        String?
+  originalText String?
+  improvedText String?
+  score        Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Analysis {
+  id                  String   @id @default(cuid())
+  resumeId            String
+  jobDescription      String?
+  atsScore            Int?
+  keywordScore        Int?
+  formattingScore     Int?
+  skillsScore         Int?
+  experienceScore     Int?
+  educationScore      Int?
+  grammarScore        Int?
+  readabilityScore    Int?
+  missingKeywords     String?
+  weakBulletPoints    String?
+  redundantSections   String?
+  formattingProblems  String?
+  grammarSuggestions  String?
+  skillsMissing       String?
+  actionVerbs         String?
+  overallImprovements String?
+  suggestions         String?
+  createdAt           DateTime @default(now())
+
+  resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+}
+
+model Interview {
+  id        String   @id @default(cuid())
+  resumeId  String
+  questions String?
+  createdAt DateTime @default(now())
+
+  resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+}
