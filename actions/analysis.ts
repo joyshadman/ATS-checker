@@ -16,8 +16,9 @@ import type {
   CoverLetterAnalysisResponse,
   JobMatchResponse,
   SectionScores,
+  ActionResult,
 } from "@/types";
-import { requireAuth } from "./auth";
+import { safeRequireAuth } from "./auth";
 import { revalidatePath } from "next/cache";
 
 type SimplifiedAIResponse = {
@@ -57,16 +58,17 @@ function toFullResponse(r: SimplifiedAIResponse): ATSAnalysisResponse {
   };
 }
 
-export async function analyzeResume(resumeId: string, jobDescription?: string) {
+export async function analyzeResume(resumeId: string, jobDescription?: string): Promise<ActionResult<ATSAnalysisResponse>> {
   try {
-    await requireAuth();
+    const auth = await safeRequireAuth();
+    if (!auth.success) return auth;
 
     const resume = await prisma.resume.findFirst({
       where: { id: resumeId },
     });
 
-    if (!resume) throw new Error("Resume not found");
-    if (!resume.originalText) throw new Error("Resume has no text content");
+    if (!resume) return { success: false, error: "Resume not found" };
+    if (!resume.originalText) return { success: false, error: "Resume has no text content" };
 
     const aiResult = await callAI<SimplifiedAIResponse>(
       ATS_ANALYSIS_SYSTEM_PROMPT,
@@ -105,26 +107,27 @@ export async function analyzeResume(resumeId: string, jobDescription?: string) {
     });
 
     revalidatePath(`/resumes/${resumeId}`);
-    return analysis;
+    return { success: true, data: analysis };
   } catch (error) {
     console.error("[analysis] analyzeResume error:", error);
-    throw error;
+    return { success: false, error: error instanceof Error ? error.message : "Analysis failed" };
   }
 }
 
 export async function analyzeCoverLetter(
   coverLetterId: string,
   jobDescription?: string
-) {
+): Promise<ActionResult<CoverLetterAnalysisResponse>> {
   try {
-    await requireAuth();
+    const auth = await safeRequireAuth();
+    if (!auth.success) return auth;
 
     const coverLetter = await prisma.coverLetter.findFirst({
       where: { id: coverLetterId },
     });
 
-    if (!coverLetter) throw new Error("Cover letter not found");
-    if (!coverLetter.originalText) throw new Error("Cover letter has no text content");
+    if (!coverLetter) return { success: false, error: "Cover letter not found" };
+    if (!coverLetter.originalText) return { success: false, error: "Cover letter has no text content" };
 
     const analysis = await callAI<CoverLetterAnalysisResponse>(
       COVER_LETTER_ANALYSIS_SYSTEM_PROMPT,
@@ -140,32 +143,33 @@ export async function analyzeCoverLetter(
     });
 
     revalidatePath(`/cover-letters/${coverLetterId}`);
-    return analysis;
+    return { success: true, data: analysis };
   } catch (error) {
     console.error("[analysis] analyzeCoverLetter error:", error);
-    throw error;
+    return { success: false, error: error instanceof Error ? error.message : "Analysis failed" };
   }
 }
 
-export async function matchResumeToJob(resumeId: string, jobDescription: string) {
+export async function matchResumeToJob(resumeId: string, jobDescription: string): Promise<ActionResult<JobMatchResponse>> {
   try {
-    await requireAuth();
+    const auth = await safeRequireAuth();
+    if (!auth.success) return auth;
 
     const resume = await prisma.resume.findFirst({
       where: { id: resumeId },
     });
 
-    if (!resume) throw new Error("Resume not found");
-    if (!resume.originalText) throw new Error("Resume has no text content");
+    if (!resume) return { success: false, error: "Resume not found" };
+    if (!resume.originalText) return { success: false, error: "Resume has no text content" };
 
     const match = await callAI<JobMatchResponse>(
       JOB_MATCH_SYSTEM_PROMPT,
       buildJobMatchPrompt(resume.originalText, jobDescription)
     );
 
-    return match;
+    return { success: true, data: match };
   } catch (error) {
     console.error("[analysis] matchResumeToJob error:", error);
-    throw error;
+    return { success: false, error: error instanceof Error ? error.message : "Match failed" };
   }
 }

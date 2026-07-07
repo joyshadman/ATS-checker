@@ -90,9 +90,12 @@ export default async function ResumePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  let resume;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let resume: any;
   try {
-    resume = await getResume(id);
+    const result = await getResume(id);
+    if (!result.success) notFound();
+    resume = result.data;
   } catch {
     notFound();
   }
@@ -102,24 +105,24 @@ export default async function ResumePage({
 
   const sections = latestAnalysis
     ? [
-        { label: "Formatting", value: latestAnalysis.formattingScore },
-        { label: "Keywords", value: latestAnalysis.keywordScore },
-        { label: "Skills", value: latestAnalysis.skillsScore },
-        { label: "Experience", value: latestAnalysis.experienceScore },
-        { label: "Education", value: latestAnalysis.educationScore },
-        { label: "Grammar", value: latestAnalysis.grammarScore },
-        { label: "Readability", value: latestAnalysis.readabilityScore },
+        { label: "Formatting", value: (latestAnalysis.formattingScore as number | null) ?? null },
+        { label: "Keywords", value: (latestAnalysis.keywordScore as number | null) ?? null },
+        { label: "Skills", value: (latestAnalysis.skillsScore as number | null) ?? null },
+        { label: "Experience", value: (latestAnalysis.experienceScore as number | null) ?? null },
+        { label: "Education", value: (latestAnalysis.educationScore as number | null) ?? null },
+        { label: "Grammar", value: (latestAnalysis.grammarScore as number | null) ?? null },
+        { label: "Readability", value: (latestAnalysis.readabilityScore as number | null) ?? null },
       ].filter((s) => s.value != null)
     : [];
 
   const missingKeywords = latestAnalysis?.missingKeywords
-    ? (JSON.parse(latestAnalysis.missingKeywords) as string[])
+    ? (JSON.parse(latestAnalysis.missingKeywords as string) as string[])
     : [];
   const suggestions = latestAnalysis?.suggestions
-    ? (JSON.parse(latestAnalysis.suggestions) as string[])
+    ? (JSON.parse(latestAnalysis.suggestions as string) as string[])
     : [];
   const overallImprovements = latestAnalysis?.overallImprovements
-    ? (JSON.parse(latestAnalysis.overallImprovements) as string[])
+    ? (JSON.parse(latestAnalysis.overallImprovements as string) as string[])
     : [];
 
   return (
@@ -127,11 +130,11 @@ export default async function ResumePage({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground tracking-tight">
-            {resume.title}
+            {resume.title as string}
           </h1>
           <p className="text-muted mt-1">
             Uploaded{" "}
-            {new Date(resume.createdAt).toLocaleDateString(undefined, {
+            {new Date(resume.createdAt as string | number | Date).toLocaleDateString(undefined, {
               year: "numeric",
               month: "long",
               day: "numeric",
@@ -298,7 +301,7 @@ export default async function ResumePage({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {(JSON.parse(latestInterview.questions) as { type: string; question: string }[]).map(
+              {(JSON.parse(latestInterview.questions as string) as { type: string; question: string }[]).map(
                 (q, i) => (
                   <div
                     key={i}

@@ -74,3 +74,7 @@ export type InterviewQuestion = {
 export type InterviewResponse = {
   questions: InterviewQuestion[];
 };
+
+export type ActionResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string };

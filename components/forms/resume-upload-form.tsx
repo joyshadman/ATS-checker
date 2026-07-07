@@ -65,8 +65,12 @@ export function ResumeUploadForm() {
     const form = new FormData(e.currentTarget);
 
     try {
-      const resume = await uploadResume(form);
-      router.push(`/resumes/${resume.id}`);
+      const result = await uploadResume(form);
+      if (!result.success) {
+        setError(result.error);
+      } else {
+        router.push(`/resumes/${result.data.id}`);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
     }

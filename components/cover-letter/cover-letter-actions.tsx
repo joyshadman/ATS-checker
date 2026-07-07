@@ -19,12 +19,16 @@ export function CoverLetterActions({ coverLetterId, hasImprovement }: Props) {
   const [error, setError] = useState("");
   const [jobDescription, setJobDescription] = useState("");
 
-  async function handleAction(action: string, fn: () => Promise<unknown>) {
+  async function handleAction(action: string, fn: () => Promise<{ success: boolean; error?: string }>) {
     setLoading(action);
     setError("");
     try {
-      await fn();
-      router.refresh();
+      const result = await fn();
+      if (!result.success) {
+        setError(result.error ?? `${action} failed`);
+      } else {
+        router.refresh();
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : `${action} failed`);
     }
@@ -63,8 +67,12 @@ export function CoverLetterActions({ coverLetterId, hasImprovement }: Props) {
 
         <Button
           onClick={async () => {
-            await deleteCoverLetter(coverLetterId);
-            router.push("/dashboard");
+            const result = await deleteCoverLetter(coverLetterId);
+            if (result.success) {
+              router.push("/dashboard");
+            } else {
+              setError(result.error);
+            }
           }}
           variant="danger"
           disabled={loading !== null}

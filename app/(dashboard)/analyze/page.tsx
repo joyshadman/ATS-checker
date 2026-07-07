@@ -19,7 +19,9 @@ export default function AnalyzePage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getResumes().then(setResumes);
+    getResumes().then((result) => {
+      if (result.success) setResumes(result.data);
+    });
   }, []);
 
   async function handleAnalyze() {
@@ -27,9 +29,13 @@ export default function AnalyzePage() {
     setLoading(true);
     setError("");
     try {
-      const a = await analyzeResume(selectedId, jobDescription || undefined);
-      setAnalysis(a);
-      setMatch(null);
+      const result = await analyzeResume(selectedId, jobDescription || undefined);
+      if (!result.success) {
+        setError(result.error);
+      } else {
+        setAnalysis(result.data);
+        setMatch(null);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Analysis failed");
     }
@@ -41,9 +47,13 @@ export default function AnalyzePage() {
     setLoading(true);
     setError("");
     try {
-      const m = await matchResumeToJob(selectedId, jobDescription);
-      setMatch(m);
-      setAnalysis(null);
+      const result = await matchResumeToJob(selectedId, jobDescription);
+      if (!result.success) {
+        setError(result.error);
+      } else {
+        setMatch(result.data);
+        setAnalysis(null);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Match failed");
     }

@@ -30,12 +30,10 @@ async function parsePDF(file: File): Promise<string> {
   // so pdfjs-dist's fake worker setup uses it directly instead of
   // attempting its own dynamic import(workerSrc) which Turbopack
   // cannot resolve during SSR bundling.
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const worker: { WorkerMessageHandler: unknown } = await import(
     // @ts-expect-error -- pdfjs-dist ships no types for the worker entry
     "pdfjs-dist/legacy/build/pdf.worker.mjs"
   );
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   (globalThis as Record<string, unknown>).pdfjsWorker = {
     WorkerMessageHandler: worker.WorkerMessageHandler,
   };

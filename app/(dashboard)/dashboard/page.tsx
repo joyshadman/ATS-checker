@@ -1,4 +1,5 @@
-import { requireAuth } from "@/actions/auth";
+import { getCurrentUser } from "@/actions/auth";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma/db";
 import Link from "next/link";
 import { ResumeUploadForm } from "@/components/forms/resume-upload-form";
@@ -7,7 +8,15 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export default async function DashboardPage() {
-  const user = await requireAuth();
+  let user;
+  try {
+    user = await getCurrentUser();
+  } catch (error) {
+    console.error("[dashboard] getCurrentUser error:", error);
+    redirect("/auth/login");
+    return;
+  }
+  if (!user) redirect("/auth/login");
 
   let totalResumes = 0;
   let stats: { _avg: { atsScore: number | null }; _max: { atsScore: number | null } } = {

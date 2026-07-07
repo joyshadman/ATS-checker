@@ -17,7 +17,9 @@ export default function InterviewPage() {
   const [error, setError] = useState("");
   // overview of the code: This is a React component that allows users to generate interview questions based on their selected resume and an optional job description. It fetches resumes, handles user input, and displays generated questions with preparation guides.
   useEffect(() => {
-    getResumes().then(setResumes);
+    getResumes().then((result) => {
+      if (result.success) setResumes(result.data);
+    });
   }, []);
 
   async function handleGenerate() {
@@ -29,7 +31,11 @@ export default function InterviewPage() {
         selectedId,
         jobDescription || undefined
       );
-      setQuestions(result.questions);
+      if (!result.success) {
+        setError(result.error);
+      } else {
+        setQuestions(result.data.questions);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Generation failed");
     }

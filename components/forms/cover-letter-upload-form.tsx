@@ -65,8 +65,12 @@ export function CoverLetterUploadForm() {
     const form = new FormData(e.currentTarget);
 
     try {
-      const coverLetter = await uploadCoverLetter(form);
-      router.push(`/cover-letters/${coverLetter.id}`);
+      const result = await uploadCoverLetter(form);
+      if (!result.success) {
+        setError(result.error);
+      } else {
+        router.push(`/cover-letters/${result.data.id}`);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
     }

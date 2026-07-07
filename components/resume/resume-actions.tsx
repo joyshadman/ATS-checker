@@ -29,12 +29,16 @@ export function ResumeActions({
   const [showJobMatch, setShowJobMatch] = useState(false);
   const [jobDescription, setJobDescription] = useState("");
 
-  async function handleAction(action: string, fn: () => Promise<unknown>) {
+  async function handleAction(action: string, fn: () => Promise<{ success: boolean; error?: string }>) {
     setLoading(action);
     setError("");
     try {
-      await fn();
-      router.refresh();
+      const result = await fn();
+      if (!result.success) {
+        setError(result.error ?? `${action} failed`);
+      } else {
+        router.refresh();
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : `${action} failed`);
     }
@@ -46,8 +50,12 @@ export function ResumeActions({
     setLoading("match");
     setError("");
     try {
-      await matchResumeToJob(resumeId, jobDescription);
-      router.refresh();
+      const result = await matchResumeToJob(resumeId, jobDescription);
+      if (!result.success) {
+        setError(result.error);
+      } else {
+        router.refresh();
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Job match failed");
     }
@@ -106,8 +114,12 @@ export function ResumeActions({
 
         <Button
           onClick={async () => {
-            await deleteResume(resumeId);
-            router.push("/dashboard");
+            const result = await deleteResume(resumeId);
+            if (result.success) {
+              router.push("/dashboard");
+            } else {
+              setError(result.error);
+            }
           }}
           variant="danger"
           disabled={loading !== null}

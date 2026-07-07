@@ -4,9 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 
 export default async function CoverLettersPage() {
-  let coverLetters: Awaited<ReturnType<typeof getCoverLetters>> = [];
+  let coverLetters: { id: string; title: string | null; score: number | null; createdAt: Date }[] = [];
   try {
-    coverLetters = await getCoverLetters();
+    const result = await getCoverLetters();
+    if (result.success) coverLetters = result.data;
   } catch (error) {
     console.error("[cover-letters] page error:", error);
   }

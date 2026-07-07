@@ -9,9 +9,20 @@ export default async function CoverLetterPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  let coverLetter;
+  let coverLetter: {
+    id: string;
+    userId: string;
+    title: string | null;
+    originalText: string | null;
+    improvedText: string | null;
+    score: number | null;
+    createdAt: Date;
+    updatedAt: Date;
+  };
   try {
-    coverLetter = await getCoverLetter(id);
+    const result = await getCoverLetter(id);
+    if (!result.success) notFound();
+    coverLetter = result.data;
   } catch {
     notFound();
   }
