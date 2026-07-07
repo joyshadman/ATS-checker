@@ -11,56 +11,76 @@ const createCoverLetterSchema = z.object({
 });
 
 export async function uploadCoverLetter(formData: FormData) {
-  const user = await requireAuth();
-  const title = formData.get("title") as string;
-  const file = formData.get("file") as File;
+  try {
+    const user = await requireAuth();
+    const title = formData.get("title") as string;
+    const file = formData.get("file") as File;
 
-  createCoverLetterSchema.parse({ title });
+    createCoverLetterSchema.parse({ title });
 
-  if (!file || file.size === 0) {
-    throw new Error("File is required");
+    if (!file || file.size === 0) {
+      throw new Error("File is required");
+    }
+
+    const { text } = await parseResumeFile(file);
+
+    const coverLetter = await prisma.coverLetter.create({
+      data: {
+        userId: user.id,
+        title,
+        originalText: text,
+      },
+    });
+
+    revalidatePath("/dashboard");
+    return coverLetter;
+  } catch (error) {
+    console.error("[cover-letter] uploadCoverLetter error:", error);
+    throw error;
   }
-
-  const { text } = await parseResumeFile(file);
-
-  const coverLetter = await prisma.coverLetter.create({
-    data: {
-      userId: user.id,
-      title,
-      originalText: text,
-    },
-  });
-
-  revalidatePath("/dashboard");
-  return coverLetter;
 }
 
 export async function getCoverLetters() {
-  const user = await requireAuth();
+  try {
+    const user = await requireAuth();
 
-  return prisma.coverLetter.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-  });
+    return prisma.coverLetter.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (error) {
+    console.error("[cover-letter] getCoverLetters error:", error);
+    throw error;
+  }
 }
 
 export async function getCoverLetter(id: string) {
-  const user = await requireAuth();
+  try {
+    const user = await requireAuth();
 
-  const coverLetter = await prisma.coverLetter.findFirst({
-    where: { id, userId: user.id },
-  });
+    const coverLetter = await prisma.coverLetter.findFirst({
+      where: { id, userId: user.id },
+    });
 
-  if (!coverLetter) throw new Error("Cover letter not found");
-  return coverLetter;
+    if (!coverLetter) throw new Error("Cover letter not found");
+    return coverLetter;
+  } catch (error) {
+    console.error("[cover-letter] getCoverLetter error:", error);
+    throw error;
+  }
 }
 
 export async function deleteCoverLetter(id: string) {
-  const user = await requireAuth();
+  try {
+    const user = await requireAuth();
 
-  await prisma.coverLetter.deleteMany({
-    where: { id, userId: user.id },
-  });
+    await prisma.coverLetter.deleteMany({
+      where: { id, userId: user.id },
+    });
 
-  revalidatePath("/dashboard");
+    revalidatePath("/dashboard");
+  } catch (error) {
+    console.error("[cover-letter] deleteCoverLetter error:", error);
+    throw error;
+  }
 }

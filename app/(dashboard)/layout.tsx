@@ -4,12 +4,21 @@ import { Sidebar } from "@/components/ui/sidebar";
 import { ToastProvider } from "@/components/ui/toast";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getSession();
+  let session;
+  try {
+    session = await getSession();
+  } catch (error) {
+    console.error("[layout] DashboardLayout getSession error:", error);
+    redirect("/auth/login");
+    return;
+  }
   if (!session) redirect("/auth/login");
 
   return (

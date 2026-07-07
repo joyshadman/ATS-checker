@@ -4,7 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 
 export default async function CoverLettersPage() {
-  const coverLetters = await getCoverLetters();
+  let coverLetters: Awaited<ReturnType<typeof getCoverLetters>> = [];
+  try {
+    coverLetters = await getCoverLetters();
+  } catch (error) {
+    console.error("[cover-letters] page error:", error);
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">

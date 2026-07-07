@@ -13,8 +13,6 @@ if (!googleClientId || !googleClientSecret) {
   );
 }
 
-console.log(`[auth] Google OAuth client ID: ${googleClientId?.slice(0, 8) ?? "not set"}...`);
-
 export const auth = betterAuth({
   baseURL: {
     allowedHosts: ["localhost:3000", "ats-checker-tan.vercel.app", "*.vercel.app"],
@@ -68,3 +66,5 @@ export const auth = betterAuth({
     },
   },
 });
+
+

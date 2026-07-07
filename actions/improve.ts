@@ -15,52 +15,62 @@ import { requireAuth } from "./auth";
 import { revalidatePath } from "next/cache";
 
 export async function improveResume(resumeId: string) {
-  await requireAuth();
+  try {
+    await requireAuth();
 
-  const resume = await prisma.resume.findFirst({
-    where: { id: resumeId },
-  });
+    const resume = await prisma.resume.findFirst({
+      where: { id: resumeId },
+    });
 
-  if (!resume) throw new Error("Resume not found");
-  if (!resume.originalText) throw new Error("Resume has no text content");
+    if (!resume) throw new Error("Resume not found");
+    if (!resume.originalText) throw new Error("Resume has no text content");
 
-  const result = await callAI<ResumeImprovementResponse>(
-    RESUME_IMPROVEMENT_SYSTEM_PROMPT,
-    buildResumeImprovementPrompt(resume.originalText)
-  );
+    const result = await callAI<ResumeImprovementResponse>(
+      RESUME_IMPROVEMENT_SYSTEM_PROMPT,
+      buildResumeImprovementPrompt(resume.originalText)
+    );
 
-  await prisma.resume.update({
-    where: { id: resumeId },
-    data: { improvedText: result.improvedResume },
-  });
+    await prisma.resume.update({
+      where: { id: resumeId },
+      data: { improvedText: result.improvedResume },
+    });
 
-  revalidatePath(`/resumes/${resumeId}`);
-  return result;
+    revalidatePath(`/resumes/${resumeId}`);
+    return result;
+  } catch (error) {
+    console.error("[improve] improveResume error:", error);
+    throw error;
+  }
 }
 
 export async function improveCoverLetter(
   coverLetterId: string,
   jobDescription?: string
 ) {
-  await requireAuth();
+  try {
+    await requireAuth();
 
-  const coverLetter = await prisma.coverLetter.findFirst({
-    where: { id: coverLetterId },
-  });
+    const coverLetter = await prisma.coverLetter.findFirst({
+      where: { id: coverLetterId },
+    });
 
-  if (!coverLetter) throw new Error("Cover letter not found");
-  if (!coverLetter.originalText) throw new Error("Cover letter has no text content");
+    if (!coverLetter) throw new Error("Cover letter not found");
+    if (!coverLetter.originalText) throw new Error("Cover letter has no text content");
 
-  const result = await callAI<CoverLetterImprovementResponse>(
-    COVER_LETTER_IMPROVEMENT_SYSTEM_PROMPT,
-    buildCoverLetterImprovementPrompt(coverLetter.originalText, jobDescription)
-  );
+    const result = await callAI<CoverLetterImprovementResponse>(
+      COVER_LETTER_IMPROVEMENT_SYSTEM_PROMPT,
+      buildCoverLetterImprovementPrompt(coverLetter.originalText, jobDescription)
+    );
 
-  await prisma.coverLetter.update({
-    where: { id: coverLetterId },
-    data: { improvedText: result.improvedCoverLetter },
-  });
+    await prisma.coverLetter.update({
+      where: { id: coverLetterId },
+      data: { improvedText: result.improvedCoverLetter },
+    });
 
-  revalidatePath(`/cover-letters/${coverLetterId}`);
-  return result;
+    revalidatePath(`/cover-letters/${coverLetterId}`);
+    return result;
+  } catch (error) {
+    console.error("[improve] improveCoverLetter error:", error);
+    throw error;
+  }
 }

@@ -11,73 +11,98 @@ const createResumeSchema = z.object({
 });
 
 export async function uploadResume(formData: FormData) {
-  const user = await requireAuth();
+  try {
+    const user = await requireAuth();
 
-  const title = formData.get("title") as string;
-  const file = formData.get("file") as File;
+    const title = formData.get("title") as string;
+    const file = formData.get("file") as File;
 
-  createResumeSchema.parse({ title });
+    createResumeSchema.parse({ title });
 
-  if (!file || file.size === 0) {
-    throw new Error("File is required");
+    if (!file || file.size === 0) {
+      throw new Error("File is required");
+    }
+
+    const { text } = await parseResumeFile(file);
+
+    const resume = await prisma.resume.create({
+      data: {
+        userId: user.id,
+        title,
+        originalText: text,
+      },
+    });
+
+    revalidatePath("/dashboard");
+    return resume;
+  } catch (error) {
+    console.error("[resume] uploadResume error:", error);
+    throw error;
   }
-
-  const { text } = await parseResumeFile(file);
-
-  const resume = await prisma.resume.create({
-    data: {
-      userId: user.id,
-      title,
-      originalText: text,
-    },
-  });
-
-  revalidatePath("/dashboard");
-  return resume;
 }
 
 export async function getResumes() {
-  const user = await requireAuth();
+  try {
+    const user = await requireAuth();
 
-  return prisma.resume.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-  });
+    return prisma.resume.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (error) {
+    console.error("[resume] getResumes error:", error);
+    throw error;
+  }
 }
 
 export async function getResume(id: string) {
-  const user = await requireAuth();
+  try {
+    const user = await requireAuth();
 
-  const resume = await prisma.resume.findFirst({
-    where: { id, userId: user.id },
-    include: {
-      analyses: { orderBy: { createdAt: "desc" }, take: 1 },
-      interviews: { orderBy: { createdAt: "desc" }, take: 1 },
-    },
-  });
+    const resume = await prisma.resume.findFirst({
+      where: { id, userId: user.id },
+      include: {
+        analyses: { orderBy: { createdAt: "desc" }, take: 1 },
+        interviews: { orderBy: { createdAt: "desc" }, take: 1 },
+      },
+    });
 
-  if (!resume) throw new Error("Resume not found");
-  return resume;
+    if (!resume) throw new Error("Resume not found");
+    return resume;
+  } catch (error) {
+    console.error("[resume] getResume error:", error);
+    throw error;
+  }
 }
 
 export async function deleteResume(id: string) {
-  const user = await requireAuth();
+  try {
+    const user = await requireAuth();
 
-  await prisma.resume.deleteMany({
-    where: { id, userId: user.id },
-  });
+    await prisma.resume.deleteMany({
+      where: { id, userId: user.id },
+    });
 
-  revalidatePath("/dashboard");
+    revalidatePath("/dashboard");
+  } catch (error) {
+    console.error("[resume] deleteResume error:", error);
+    throw error;
+  }
 }
 
 export async function updateResumeText(id: string, improvedText: string) {
-  const user = await requireAuth();
+  try {
+    const user = await requireAuth();
 
-  const resume = await prisma.resume.updateMany({
-    where: { id, userId: user.id },
-    data: { improvedText },
-  });
+    const resume = await prisma.resume.updateMany({
+      where: { id, userId: user.id },
+      data: { improvedText },
+    });
 
-  revalidatePath(`/resumes/${id}`);
-  return resume;
+    revalidatePath(`/resumes/${id}`);
+    return resume;
+  } catch (error) {
+    console.error("[resume] updateResumeText error:", error);
+    throw error;
+  }
 }

@@ -58,99 +58,114 @@ function toFullResponse(r: SimplifiedAIResponse): ATSAnalysisResponse {
 }
 
 export async function analyzeResume(resumeId: string, jobDescription?: string) {
-  await requireAuth();
+  try {
+    await requireAuth();
 
-  const resume = await prisma.resume.findFirst({
-    where: { id: resumeId },
-  });
+    const resume = await prisma.resume.findFirst({
+      where: { id: resumeId },
+    });
 
-  if (!resume) throw new Error("Resume not found");
-  if (!resume.originalText) throw new Error("Resume has no text content");
+    if (!resume) throw new Error("Resume not found");
+    if (!resume.originalText) throw new Error("Resume has no text content");
 
-  const aiResult = await callAI<SimplifiedAIResponse>(
-    ATS_ANALYSIS_SYSTEM_PROMPT,
-    buildATSAnalysisPrompt(resume.originalText, jobDescription)
-  );
+    const aiResult = await callAI<SimplifiedAIResponse>(
+      ATS_ANALYSIS_SYSTEM_PROMPT,
+      buildATSAnalysisPrompt(resume.originalText, jobDescription)
+    );
 
-  const analysis = toFullResponse(aiResult);
+    const analysis = toFullResponse(aiResult);
 
-  await prisma.analysis.create({
-    data: {
-      resumeId,
-      jobDescription: jobDescription ?? null,
-      atsScore: analysis.atsScore,
-      keywordScore: analysis.keywordScore,
-      formattingScore: analysis.formattingScore,
-      skillsScore: analysis.skillsScore,
-      experienceScore: analysis.experienceScore,
-      educationScore: analysis.educationScore,
-      grammarScore: analysis.grammarScore,
-      readabilityScore: analysis.readabilityScore,
-      missingKeywords: JSON.stringify(analysis.missingKeywords),
-      weakBulletPoints: JSON.stringify(analysis.weakBulletPoints),
-      redundantSections: JSON.stringify(analysis.redundantSections),
-      formattingProblems: JSON.stringify(analysis.formattingProblems),
-      grammarSuggestions: JSON.stringify(analysis.grammarSuggestions),
-      skillsMissing: JSON.stringify(analysis.skillsMissing),
-      actionVerbs: JSON.stringify(analysis.actionVerbs),
-      overallImprovements: JSON.stringify(analysis.overallImprovements),
-      suggestions: JSON.stringify(analysis.suggestions),
-    },
-  });
+    await prisma.analysis.create({
+      data: {
+        resumeId,
+        jobDescription: jobDescription ?? null,
+        atsScore: analysis.atsScore,
+        keywordScore: analysis.keywordScore,
+        formattingScore: analysis.formattingScore,
+        skillsScore: analysis.skillsScore,
+        experienceScore: analysis.experienceScore,
+        educationScore: analysis.educationScore,
+        grammarScore: analysis.grammarScore,
+        readabilityScore: analysis.readabilityScore,
+        missingKeywords: JSON.stringify(analysis.missingKeywords),
+        weakBulletPoints: JSON.stringify(analysis.weakBulletPoints),
+        redundantSections: JSON.stringify(analysis.redundantSections),
+        formattingProblems: JSON.stringify(analysis.formattingProblems),
+        grammarSuggestions: JSON.stringify(analysis.grammarSuggestions),
+        skillsMissing: JSON.stringify(analysis.skillsMissing),
+        actionVerbs: JSON.stringify(analysis.actionVerbs),
+        overallImprovements: JSON.stringify(analysis.overallImprovements),
+        suggestions: JSON.stringify(analysis.suggestions),
+      },
+    });
 
-  await prisma.resume.update({
-    where: { id: resumeId },
-    data: { atsScore: analysis.atsScore },
-  });
+    await prisma.resume.update({
+      where: { id: resumeId },
+      data: { atsScore: analysis.atsScore },
+    });
 
-  revalidatePath(`/resumes/${resumeId}`);
-  return analysis;
+    revalidatePath(`/resumes/${resumeId}`);
+    return analysis;
+  } catch (error) {
+    console.error("[analysis] analyzeResume error:", error);
+    throw error;
+  }
 }
 
 export async function analyzeCoverLetter(
   coverLetterId: string,
   jobDescription?: string
 ) {
-  await requireAuth();
+  try {
+    await requireAuth();
 
-  const coverLetter = await prisma.coverLetter.findFirst({
-    where: { id: coverLetterId },
-  });
+    const coverLetter = await prisma.coverLetter.findFirst({
+      where: { id: coverLetterId },
+    });
 
-  if (!coverLetter) throw new Error("Cover letter not found");
-  if (!coverLetter.originalText) throw new Error("Cover letter has no text content");
+    if (!coverLetter) throw new Error("Cover letter not found");
+    if (!coverLetter.originalText) throw new Error("Cover letter has no text content");
 
-  const analysis = await callAI<CoverLetterAnalysisResponse>(
-    COVER_LETTER_ANALYSIS_SYSTEM_PROMPT,
-    buildCoverLetterAnalysisPrompt(coverLetter.originalText, jobDescription)
-  );
+    const analysis = await callAI<CoverLetterAnalysisResponse>(
+      COVER_LETTER_ANALYSIS_SYSTEM_PROMPT,
+      buildCoverLetterAnalysisPrompt(coverLetter.originalText, jobDescription)
+    );
 
-  await prisma.coverLetter.update({
-    where: { id: coverLetterId },
-    data: {
-      score: analysis.score,
-      improvedText: analysis.improvedVersion,
-    },
-  });
+    await prisma.coverLetter.update({
+      where: { id: coverLetterId },
+      data: {
+        score: analysis.score,
+        improvedText: analysis.improvedVersion,
+      },
+    });
 
-  revalidatePath(`/cover-letters/${coverLetterId}`);
-  return analysis;
+    revalidatePath(`/cover-letters/${coverLetterId}`);
+    return analysis;
+  } catch (error) {
+    console.error("[analysis] analyzeCoverLetter error:", error);
+    throw error;
+  }
 }
 
 export async function matchResumeToJob(resumeId: string, jobDescription: string) {
-  await requireAuth();
+  try {
+    await requireAuth();
 
-  const resume = await prisma.resume.findFirst({
-    where: { id: resumeId },
-  });
+    const resume = await prisma.resume.findFirst({
+      where: { id: resumeId },
+    });
 
-  if (!resume) throw new Error("Resume not found");
-  if (!resume.originalText) throw new Error("Resume has no text content");
+    if (!resume) throw new Error("Resume not found");
+    if (!resume.originalText) throw new Error("Resume has no text content");
 
-  const match = await callAI<JobMatchResponse>(
-    JOB_MATCH_SYSTEM_PROMPT,
-    buildJobMatchPrompt(resume.originalText, jobDescription)
-  );
+    const match = await callAI<JobMatchResponse>(
+      JOB_MATCH_SYSTEM_PROMPT,
+      buildJobMatchPrompt(resume.originalText, jobDescription)
+    );
 
-  return match;
+    return match;
+  } catch (error) {
+    console.error("[analysis] matchResumeToJob error:", error);
+    throw error;
+  }
 }

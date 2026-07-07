@@ -5,16 +5,21 @@ import { ResumeList } from "@/components/resume/resume-list";
 export default async function ResumesPage() {
   const user = await requireAuth();
 
-  const resumes = await prisma.resume.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      title: true,
-      atsScore: true,
-      createdAt: true,
-    },
-  });
+  let resumes: { id: string; title: string; atsScore: number | null; createdAt: Date }[] = [];
+  try {
+    resumes = await prisma.resume.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        atsScore: true,
+        createdAt: true,
+      },
+    });
+  } catch (error) {
+    console.error("[resumes] page error:", error);
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">

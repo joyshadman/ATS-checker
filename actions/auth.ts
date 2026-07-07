@@ -4,19 +4,31 @@ import { auth } from "@/lib/auth/auth";
 import { headers } from "next/headers";
 
 export async function getSession() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  return session;
+  try {
+    const hdrs = await headers();
+    const session = await auth.api.getSession({ headers: hdrs });
+    return session;
+  } catch (error) {
+    console.error("[auth] getSession error:", error);
+    return null;
+  }
 }
 
 export async function getCurrentUser() {
-  const session = await getSession();
-  return session?.user ?? null;
+  try {
+    const session = await getSession();
+    return session?.user ?? null;
+  } catch (error) {
+    console.error("[auth] getCurrentUser error:", error);
+    return null;
+  }
 }
 
 export async function requireAuth() {
   const user = await getCurrentUser();
-  if (!user) throw new Error("Unauthorized");
+  if (!user) {
+    console.error("[auth] requireAuth failed — no authenticated user");
+    throw new Error("Unauthorized");
+  }
   return user;
 }

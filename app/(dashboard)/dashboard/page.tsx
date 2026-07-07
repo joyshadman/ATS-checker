@@ -9,27 +9,39 @@ import { Badge } from "@/components/ui/badge";
 export default async function DashboardPage() {
   const user = await requireAuth();
 
-  const [totalResumes, stats, recentResumes, totalCoverLetters] =
-    await Promise.all([
-      prisma.resume.count({ where: { userId: user.id } }),
-      prisma.resume.aggregate({
-        where: { userId: user.id },
-        _avg: { atsScore: true },
-        _max: { atsScore: true },
-      }),
-      prisma.resume.findMany({
-        where: { userId: user.id },
-        orderBy: { updatedAt: "desc" },
-        take: 5,
-        select: {
-          id: true,
-          title: true,
-          atsScore: true,
-          updatedAt: true,
-        },
-      }),
-      prisma.coverLetter.count({ where: { userId: user.id } }),
-    ]);
+  let totalResumes = 0;
+  let stats: { _avg: { atsScore: number | null }; _max: { atsScore: number | null } } = {
+    _avg: { atsScore: null },
+    _max: { atsScore: null },
+  };
+  let recentResumes: { id: string; title: string; atsScore: number | null; updatedAt: Date }[] = [];
+  let totalCoverLetters = 0;
+
+  try {
+    [totalResumes, stats, recentResumes, totalCoverLetters] =
+      await Promise.all([
+        prisma.resume.count({ where: { userId: user.id } }),
+        prisma.resume.aggregate({
+          where: { userId: user.id },
+          _avg: { atsScore: true },
+          _max: { atsScore: true },
+        }),
+        prisma.resume.findMany({
+          where: { userId: user.id },
+          orderBy: { updatedAt: "desc" },
+          take: 5,
+          select: {
+            id: true,
+            title: true,
+            atsScore: true,
+            updatedAt: true,
+          },
+        }),
+        prisma.coverLetter.count({ where: { userId: user.id } }),
+      ]);
+  } catch (error) {
+    console.error("[dashboard] Prisma queries failed:", error);
+  }
 
   const avgScore = stats._avg.atsScore;
   const maxScore = stats._max.atsScore;
