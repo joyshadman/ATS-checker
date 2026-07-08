@@ -26,10 +26,15 @@ export async function improveResume(resumeId: string): Promise<ActionResult<Resu
     if (!resume) return { success: false, error: "Resume not found" };
     if (!resume.originalText) return { success: false, error: "Resume has no text content" };
 
-    const result = await callAI<ResumeImprovementResponse>(
+    const aiResult = await callAI<ResumeImprovementResponse>(
       RESUME_IMPROVEMENT_SYSTEM_PROMPT,
-      buildResumeImprovementPrompt(resume.originalText)
+      buildResumeImprovementPrompt(resume.originalText),
+      `improve:${resumeId}`
     );
+
+    if (!aiResult.success) return aiResult;
+
+    const result = aiResult.data;
 
     await prisma.resume.update({
       where: { id: resumeId },
@@ -59,10 +64,15 @@ export async function improveCoverLetter(
     if (!coverLetter) return { success: false, error: "Cover letter not found" };
     if (!coverLetter.originalText) return { success: false, error: "Cover letter has no text content" };
 
-    const result = await callAI<CoverLetterImprovementResponse>(
+    const aiResult = await callAI<CoverLetterImprovementResponse>(
       COVER_LETTER_IMPROVEMENT_SYSTEM_PROMPT,
-      buildCoverLetterImprovementPrompt(coverLetter.originalText, jobDescription)
+      buildCoverLetterImprovementPrompt(coverLetter.originalText, jobDescription),
+      `improve-cover:${coverLetterId}`
     );
+
+    if (!aiResult.success) return aiResult;
+
+    const result = aiResult.data;
 
     await prisma.coverLetter.update({
       where: { id: coverLetterId },

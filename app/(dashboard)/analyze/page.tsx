@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getResumes } from "@/actions/resume";
 import { analyzeResume, matchResumeToJob } from "@/actions/analysis";
 import type { ATSAnalysisResponse, JobMatchResponse } from "@/types";
@@ -17,6 +17,7 @@ export default function AnalyzePage() {
   const [match, setMatch] = useState<JobMatchResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const pendingRef = useRef(false);
 
   useEffect(() => {
     getResumes().then((result) => {
@@ -26,6 +27,8 @@ export default function AnalyzePage() {
 
   async function handleAnalyze() {
     if (!selectedId) return;
+    if (pendingRef.current) return;
+    pendingRef.current = true;
     setLoading(true);
     setError("");
     try {
@@ -39,11 +42,14 @@ export default function AnalyzePage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Analysis failed");
     }
+    pendingRef.current = false;
     setLoading(false);
   }
 
   async function handleMatch() {
     if (!selectedId || !jobDescription) return;
+    if (pendingRef.current) return;
+    pendingRef.current = true;
     setLoading(true);
     setError("");
     try {
@@ -57,6 +63,7 @@ export default function AnalyzePage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Match failed");
     }
+    pendingRef.current = false;
     setLoading(false);
   }
 

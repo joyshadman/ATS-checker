@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { deleteResume } from "@/actions/resume";
 import { improveResume } from "@/actions/improve";
@@ -28,8 +28,11 @@ export function ResumeActions({
   const [error, setError] = useState("");
   const [showJobMatch, setShowJobMatch] = useState(false);
   const [jobDescription, setJobDescription] = useState("");
+  const pendingRef = useRef(false);
 
   async function handleAction(action: string, fn: () => Promise<{ success: boolean; error?: string }>) {
+    if (pendingRef.current) return;
+    pendingRef.current = true;
     setLoading(action);
     setError("");
     try {
@@ -42,11 +45,14 @@ export function ResumeActions({
     } catch (e) {
       setError(e instanceof Error ? e.message : `${action} failed`);
     }
+    pendingRef.current = false;
     setLoading(null);
   }
 
   async function handleJobMatch() {
     if (!jobDescription.trim()) return;
+    if (pendingRef.current) return;
+    pendingRef.current = true;
     setLoading("match");
     setError("");
     try {
@@ -59,6 +65,7 @@ export function ResumeActions({
     } catch (e) {
       setError(e instanceof Error ? e.message : "Job match failed");
     }
+    pendingRef.current = false;
     setLoading(null);
   }
 

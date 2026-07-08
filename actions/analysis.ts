@@ -72,10 +72,13 @@ export async function analyzeResume(resumeId: string, jobDescription?: string): 
 
     const aiResult = await callAI<SimplifiedAIResponse>(
       ATS_ANALYSIS_SYSTEM_PROMPT,
-      buildATSAnalysisPrompt(resume.originalText, jobDescription)
+      buildATSAnalysisPrompt(resume.originalText, jobDescription),
+      `analyze:${resumeId}`
     );
 
-    const analysis = toFullResponse(aiResult);
+    if (!aiResult.success) return aiResult;
+
+    const analysis = toFullResponse(aiResult.data);
 
     await prisma.analysis.create({
       data: {
@@ -129,10 +132,15 @@ export async function analyzeCoverLetter(
     if (!coverLetter) return { success: false, error: "Cover letter not found" };
     if (!coverLetter.originalText) return { success: false, error: "Cover letter has no text content" };
 
-    const analysis = await callAI<CoverLetterAnalysisResponse>(
+    const aiResult = await callAI<CoverLetterAnalysisResponse>(
       COVER_LETTER_ANALYSIS_SYSTEM_PROMPT,
-      buildCoverLetterAnalysisPrompt(coverLetter.originalText, jobDescription)
+      buildCoverLetterAnalysisPrompt(coverLetter.originalText, jobDescription),
+      `analyze-cover:${coverLetterId}`
     );
+
+    if (!aiResult.success) return aiResult;
+
+    const analysis = aiResult.data;
 
     await prisma.coverLetter.update({
       where: { id: coverLetterId },
@@ -164,10 +172,13 @@ export async function matchResumeToJob(resumeId: string, jobDescription: string)
 
     const match = await callAI<JobMatchResponse>(
       JOB_MATCH_SYSTEM_PROMPT,
-      buildJobMatchPrompt(resume.originalText, jobDescription)
+      buildJobMatchPrompt(resume.originalText, jobDescription),
+      `match:${resumeId}`
     );
 
-    return { success: true, data: match };
+    if (!match.success) return match;
+
+    return { success: true, data: match.data };
   } catch (error) {
     console.error("[analysis] matchResumeToJob error:", error);
     return { success: false, error: error instanceof Error ? error.message : "Match failed" };

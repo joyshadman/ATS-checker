@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { deleteCoverLetter } from "@/actions/cover-letter";
 import { analyzeCoverLetter } from "@/actions/analysis";
@@ -18,8 +18,11 @@ export function CoverLetterActions({ coverLetterId, hasImprovement }: Props) {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [jobDescription, setJobDescription] = useState("");
+  const pendingRef = useRef(false);
 
   async function handleAction(action: string, fn: () => Promise<{ success: boolean; error?: string }>) {
+    if (pendingRef.current) return;
+    pendingRef.current = true;
     setLoading(action);
     setError("");
     try {
@@ -32,6 +35,7 @@ export function CoverLetterActions({ coverLetterId, hasImprovement }: Props) {
     } catch (e) {
       setError(e instanceof Error ? e.message : `${action} failed`);
     }
+    pendingRef.current = false;
     setLoading(null);
   }
 

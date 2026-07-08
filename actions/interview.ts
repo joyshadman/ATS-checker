@@ -25,10 +25,15 @@ export async function generateInterviewQuestions(
     if (!resume) return { success: false, error: "Resume not found" };
     if (!resume.originalText) return { success: false, error: "Resume has no text content" };
 
-    const result = await callAI<InterviewResponse>(
+    const aiResult = await callAI<InterviewResponse>(
       INTERVIEW_QUESTIONS_SYSTEM_PROMPT,
-      buildInterviewPrompt(resume.originalText, jobDescription)
+      buildInterviewPrompt(resume.originalText, jobDescription),
+      `interview:${resumeId}`
     );
+
+    if (!aiResult.success) return aiResult;
+
+    const result = aiResult.data;
 
     await prisma.interview.create({
       data: {

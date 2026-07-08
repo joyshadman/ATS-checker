@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getResumes } from "@/actions/resume";
 import { generateInterviewQuestions } from "@/actions/interview";
 import type { InterviewQuestion } from "@/types";
@@ -15,7 +15,7 @@ export default function InterviewPage() {
   const [questions, setQuestions] = useState<InterviewQuestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  // overview of the code: This is a React component that allows users to generate interview questions based on their selected resume and an optional job description. It fetches resumes, handles user input, and displays generated questions with preparation guides.
+  const pendingRef = useRef(false);
   useEffect(() => {
     getResumes().then((result) => {
       if (result.success) setResumes(result.data);
@@ -24,6 +24,8 @@ export default function InterviewPage() {
 
   async function handleGenerate() {
     if (!selectedId) return;
+    if (pendingRef.current) return;
+    pendingRef.current = true;
     setLoading(true);
     setError("");
     try {
@@ -39,6 +41,7 @@ export default function InterviewPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Generation failed");
     }
+    pendingRef.current = false;
     setLoading(false);
   }
 

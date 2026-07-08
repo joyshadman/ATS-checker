@@ -1,24 +1,59 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useReducer } from "react";
+
+type State = {
+  mounted: boolean;
+  dark: boolean;
+};
+
+type Action =
+  | { type: "init"; dark: boolean }
+  | { type: "toggle" };
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case "init":
+      return { mounted: true, dark: action.dark };
+    case "toggle":
+      return { ...state, dark: !state.dark };
+  }
+}
+
+const initialState: State = { mounted: false, dark: false };
 
 export function ThemeToggle() {
-  const [dark, setDark] = useState(() => {
-    if (typeof window === "undefined") return false;
-    const stored = localStorage.getItem("theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    return stored ? stored === "dark" : prefersDark;
-  });
+  const [{ mounted, dark }, dispatch] = useReducer(reducer, initialState);
 
   useEffect(() => {
+    const stored = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const isDark = stored ? stored === "dark" : prefersDark;
+    document.documentElement.classList.toggle("dark", isDark);
+    dispatch({ type: "init", dark: isDark });
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     document.documentElement.classList.toggle("dark", dark);
-  }, [dark]);
+  }, [dark, mounted]);
 
   function toggle() {
     const next = !dark;
-    setDark(next);
     document.documentElement.classList.toggle("dark", next);
     localStorage.setItem("theme", next ? "dark" : "light");
+    dispatch({ type: "toggle" });
+  }
+
+  if (!mounted) {
+    return (
+      <button
+        className="rounded-xl border bg-card p-2.5 text-muted transition-all duration-150 shadow-card"
+        aria-label="Toggle theme"
+      >
+        <div className="w-4 h-4" />
+      </button>
+    );
   }
 
   return (

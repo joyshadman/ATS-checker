@@ -77,4 +77,4 @@ export type InterviewResponse = {
 
 export type ActionResult<T> =
   | { success: true; data: T }
-  | { success: false; error: string };
+  | { success: false; error: string; code?: string; retryable?: boolean };
