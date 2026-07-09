@@ -50,7 +50,7 @@ components/
   resume/             # resume-actions (analyze/improve/interview/delete/job-match)
   cover-letter/       # cover-letter-actions (analyze/improve/delete)
 lib/
-  ai/client.ts        # OpenRouter client: callAI<T>(systemPrompt, userPrompt, maxRetries?)
+  ai/client.ts        # OpenRouter client: callAI<T>(systemPrompt, userPrompt, dedupKey?)
   auth/auth.ts        # Better Auth server config (email/password + optional Google)
   auth/client.ts      # createAuthClient for signIn, signUp, signOut, useSession
   auth/url.ts         # Dynamic base URL resolution (supports localhost, Vercel, custom)
@@ -73,12 +73,15 @@ types/index.ts        # All response types: ATSAnalysisResponse, JobMatchRespons
 ## Environment Variables Required
 
 ```
-DATABASE_URL          # Neon PostgreSQL connection string
-BETTER_AUTH_SECRET    # Random string >= 32 chars
-BETTER_AUTH_URL       # Optional — auto-detected via VERCEL_URL or http://localhost:3000 fallback
-OPENROUTER_API_KEY    # From openrouter.ai/keys
-GOOGLE_CLIENT_ID      # Optional, for Google login
-GOOGLE_CLIENT_SECRET  # Optional, for Google login
+DATABASE_URL              # Neon PostgreSQL connection string
+BETTER_AUTH_SECRET        # Random string >= 32 chars
+BETTER_AUTH_URL           # Optional — auto-detected via VERCEL_URL or http://localhost:3000 fallback
+OPENROUTER_API_KEY        # Required — from openrouter.ai/keys
+OPENROUTER_MODEL          # Optional — default: gpt-oss-120b:free
+OPENROUTER_BASE_URL       # Optional — default: https://openrouter.ai/api/v1
+AI_TIMEOUT_MS             # Optional — default: 30000 (30s)
+GOOGLE_CLIENT_ID          # Optional, for Google login
+GOOGLE_CLIENT_SECRET      # Optional, for Google login
 ```
 
 ## Commands
@@ -94,11 +97,20 @@ npx prisma studio     # Open database UI
 
 ## AI Model
 
-```typescript
-const MODEL = "openai/gpt-oss-120b:free";
-```
+Configured via `OPENROUTER_MODEL` env var (default: `gpt-oss-120b:free`).
 
-Single OpenRouter model with `temperature: 0.2`, `max_tokens: 1024`, and a 30-second timeout. Always returns JSON via `response_format: { type: "json_object" }`. Invalid JSON responses raise a descriptive error.
+Uses `temperature: 0.2`, `max_tokens: 1024`, 30s timeout, and `response_format: { type: "json_object" }`. Retries up to 3 times per model with 1s/2s/4s exponential backoff for 429/5xx errors. In-flight dedup prevents duplicate requests. Response cache (5 min TTL) avoids redundant calls for identical prompts.
+
+### Automatic Fallback Models
+
+If the primary model returns 429, 500, 502, 503, or 504, the request automatically falls through to the next available model:
+
+1. **Primary** — `openai/gpt-oss-120b:free`
+2. **Fallback 1** — `google/gemini-2.5-flash:free`
+3. **Fallback 2** — `deepseek/deepseek-v3:free`
+4. **Fallback 3** — `qwen/qwen3:free`
+
+Non-retryable errors (401, 403, credit exhausted, etc.) halt immediately and do NOT trigger fallback. All provider errors are logged server-side; dev-only logs include model name, duration, retries, and fallback chain.
 
 ## Important Notes
 

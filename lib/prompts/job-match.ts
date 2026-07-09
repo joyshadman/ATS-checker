@@ -1,8 +1,6 @@
-export const JOB_MATCH_SYSTEM_PROMPT = `You are an expert job matching analyst. Compare the provided resume against the job description and return a detailed match analysis.
-
-Return JSON with exactly this structure:
+export const JOB_MATCH_SYSTEM_PROMPT = `You are an expert job matching analyst. Compare the resume against the job description and return detailed match analysis. Return valid JSON only:
 {
-  "matchPercentage": number (0-100),
+  "matchPercentage": 0-100,
   "missingKeywords": string[],
   "matchingSkills": string[],
   "missingSkills": string[],
@@ -10,9 +8,14 @@ Return JSON with exactly this structure:
   "resumeChangesNeeded": string[]
 }`;
 
+function truncate(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  return text.slice(0, maxChars) + "\n\n[content truncated...]";
+}
+
 export function buildJobMatchPrompt(
   resumeText: string,
   jobDescription: string
 ): string {
-  return `Compare this resume against the job description and analyze the match.\n\nResume:\n${resumeText}\n\nJob Description:\n${jobDescription}`;
+  return `RESUME:\n${truncate(resumeText, 8000)}\n\nJOB DESCRIPTION:\n${truncate(jobDescription, 4000)}`;
 }

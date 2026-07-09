@@ -1,26 +1,23 @@
-export const ATS_ANALYSIS_SYSTEM_PROMPT = `You are an expert ATS (Applicant Tracking System) resume analyzer.
-
-Return JSON with this structure:
+export const ATS_ANALYSIS_SYSTEM_PROMPT = `You are an expert ATS resume analyzer. Return valid JSON only:
 {
-  "atsScore": number 0-100,
+  "atsScore": number (0-100),
   "summary": "1-2 sentence summary",
-  "strengths": ["..."],
-  "weaknesses": ["..."],
-  "missingKeywords": ["..."],
-  "recommendations": ["..."],
-  "sectionScores": {
-    "format": number 0-100,
-    "keywords": number 0-100,
-    "experience": number 0-100,
-    "education": number 0-100,
-    "skills": number 0-100
-  }
+  "strengths": string[],
+  "weaknesses": string[],
+  "missingKeywords": string[],
+  "recommendations": string[],
+  "sectionScores": { "format": 0-100, "keywords": 0-100, "experience": 0-100, "education": 0-100, "skills": 0-100 }
 }`;
 
+function truncate(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  return text.slice(0, maxChars) + "\n\n[content truncated...]";
+}
+
 export function buildATSAnalysisPrompt(resumeText: string, jobDescription?: string): string {
-  let prompt = `Resume:\n${resumeText}`;
+  let prompt = `RESUME:\n${truncate(resumeText, 8000)}`;
   if (jobDescription) {
-    prompt += `\n\nJob Description:\n${jobDescription}`;
+    prompt += `\n\nJOB DESCRIPTION:\n${truncate(jobDescription, 4000)}`;
   }
   return prompt;
 }

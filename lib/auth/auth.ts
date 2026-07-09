@@ -2,7 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "@/lib/prisma/db";
 import { nextCookies } from "better-auth/next-js";
-import { getBaseURL } from "@/lib/env";
+import { getBaseURL } from "@/lib/auth/url";
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;

@@ -1,43 +1,36 @@
-export const COVER_LETTER_ANALYSIS_SYSTEM_PROMPT = `You are an expert cover letter analyst. Analyze the provided cover letter and return a JSON response.
-
-If a job description is provided, also evaluate how well the cover letter matches the job requirements.
-
-Return JSON with exactly this structure:
+export const COVER_LETTER_ANALYSIS_SYSTEM_PROMPT = `You are an expert cover letter analyst. Return valid JSON only:
 {
-  "score": number (0-100),
-  "atsFriendliness": number (0-100),
-  "grammar": number (0-100),
-  "personalization": number (0-100),
-  "tone": number (0-100),
-  "professionalism": number (0-100),
-  "readability": number (0-100),
+  "score": 0-100,
+  "atsFriendliness": 0-100,
+  "grammar": 0-100,
+  "personalization": 0-100,
+  "tone": 0-100,
+  "professionalism": 0-100,
+  "readability": 0-100,
   "suggestions": string[],
   "improvedVersion": string
 }`;
 
-export const COVER_LETTER_IMPROVEMENT_SYSTEM_PROMPT = `You are an expert cover letter writer. Rewrite the provided cover letter to be more effective and ATS-friendly.
-
-Return JSON with exactly this structure:
+export const COVER_LETTER_IMPROVEMENT_SYSTEM_PROMPT = `You are an expert cover letter writer. Rewrite the provided cover letter to be more effective and ATS-friendly. Return valid JSON only:
 {
-  "improvedCoverLetter": string (the complete rewritten cover letter),
+  "improvedCoverLetter": "complete rewritten cover letter",
   "keyChanges": string[]
 }
 
-Requirements for the improved cover letter:
-- Strong introduction that grabs attention
-- Relevant skills highlighted with specific examples
-- Experience matching the target role
-- Professional ending with call to action
-- ATS-optimized plain text format
-- Personalized to the specific role/company`;
+Rules: Strong intro, relevant skills with examples, experience matching target role, professional ending with call to action, ATS-optimized plain text, personalized to role/company.`;
+
+function truncate(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  return text.slice(0, maxChars) + "\n\n[content truncated...]";
+}
 
 export function buildCoverLetterAnalysisPrompt(
   coverLetterText: string,
   jobDescription?: string
 ): string {
-  let prompt = `Analyze this cover letter:\n\n${coverLetterText}`;
+  let prompt = `COVER LETTER:\n${truncate(coverLetterText, 8000)}`;
   if (jobDescription) {
-    prompt += `\n\nJob Description:\n${jobDescription}`;
+    prompt += `\n\nJOB DESCRIPTION:\n${truncate(jobDescription, 4000)}`;
   }
   return prompt;
 }
@@ -46,9 +39,9 @@ export function buildCoverLetterImprovementPrompt(
   coverLetterText: string,
   jobDescription?: string
 ): string {
-  let prompt = `Rewrite this cover letter to be more effective:\n\n${coverLetterText}`;
+  let prompt = `COVER LETTER:\n${truncate(coverLetterText, 8000)}`;
   if (jobDescription) {
-    prompt += `\n\nTarget Job Description:\n${jobDescription}`;
+    prompt += `\n\nTARGET JOB:\n${truncate(jobDescription, 4000)}`;
   }
   return prompt;
 }

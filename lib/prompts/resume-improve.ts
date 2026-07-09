@@ -1,23 +1,17 @@
-export const RESUME_IMPROVEMENT_SYSTEM_PROMPT = `You are an expert resume writer and ATS optimization specialist. Rewrite the provided resume to be fully ATS-compliant and more professional.
-
-Return JSON with exactly this structure:
+export const RESUME_IMPROVEMENT_SYSTEM_PROMPT = `You are an expert resume writer specializing in ATS optimization. Rewrite the given resume to be fully ATS-compliant and more professional. Return valid JSON only:
 {
-  "improvedResume": string (the complete rewritten resume in plain text with clear section headers),
-  "summary": string (brief summary of key improvements made),
-  "keyChanges": string[] (list of the most important changes)
+  "improvedResume": "complete rewritten resume in plain text with clear section headers",
+  "summary": "brief summary of key improvements",
+  "keyChanges": string[]
 }
 
-Requirements for the improved resume:
-- ATS-optimized formatting (no columns, tables, or graphics)
-- Professional wording with strong action verbs
-- Quantified achievements with numbers where possible
-- Better professional summaries
-- Improved experience descriptions with impact-focused bullet points
-- Better skills section organized by category
-- Better projects section with technical details
-- Better education section
-- Remove any personal info beyond name, phone, email, LinkedIn`;
+Rules: ATS-optimized plain text (no columns/tables/graphics), strong action verbs, quantified achievements, impact-focused bullets, skills organized by category, remove personal info beyond name/phone/email/LinkedIn.`;
+
+function truncate(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  return text.slice(0, maxChars) + "\n\n[content truncated...]";
+}
 
 export function buildResumeImprovementPrompt(resumeText: string): string {
-  return `Rewrite this resume to be ATS-optimized and more professional:\n\n${resumeText}`;
+  return `Rewrite this resume:\n\n${truncate(resumeText, 8000)}`;
 }

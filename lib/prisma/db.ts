@@ -10,8 +10,8 @@ function createPrismaClient() {
         : ["error"],
   });
 
-  client.$connect().catch((err) => {
-    console.error("[prisma] Initial connection failed:", err.message);
+  client.$connect().catch((err: unknown) => {
+    console.error("[prisma] Initial connection failed:", err instanceof Error ? err.message : String(err));
   });
 
   return client;
