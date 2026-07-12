@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { getResumes } from "@/actions/resume";
 import { analyzeResume, matchResumeToJob } from "@/actions/analysis";
 import type { ATSAnalysisResponse, JobMatchResponse } from "@/types";
@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { ErrorBanner } from "@/components/ui/error-banner";
+import { PageHeader } from "@/components/ui/page-header";
+import { ResumeSelector } from "@/components/ui/resume-selector";
+import { JobDescriptionInput } from "@/components/ui/job-description-input";
+import { useAsyncAction } from "@/hooks/use-async-action";
+import { scoreToVariant } from "@/lib/utils";
+import { BarChart3 } from "@/components/ui/icons";
 
 export default function AnalyzePage() {
   const [resumes, setResumes] = useState<{ id: string; title: string }[]>([]);
@@ -15,9 +22,7 @@ export default function AnalyzePage() {
   const [jobDescription, setJobDescription] = useState("");
   const [analysis, setAnalysis] = useState<ATSAnalysisResponse | null>(null);
   const [match, setMatch] = useState<JobMatchResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const pendingRef = useRef(false);
+  const { isPending, error, execute, reset } = useAsyncAction();
 
   useEffect(() => {
     getResumes().then((result) => {
@@ -27,44 +32,24 @@ export default function AnalyzePage() {
 
   async function handleAnalyze() {
     if (!selectedId) return;
-    if (pendingRef.current) return;
-    pendingRef.current = true;
-    setLoading(true);
-    setError("");
-    try {
+    await execute(async () => {
       const result = await analyzeResume(selectedId, jobDescription || undefined);
-      if (!result.success) {
-        setError(result.error);
-      } else {
-        setAnalysis(result.data);
-        setMatch(null);
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Analysis failed");
-    }
-    pendingRef.current = false;
-    setLoading(false);
+      if (!result.success) return result.error;
+      setAnalysis(result.data);
+      setMatch(null);
+      return null;
+    });
   }
 
   async function handleMatch() {
     if (!selectedId || !jobDescription) return;
-    if (pendingRef.current) return;
-    pendingRef.current = true;
-    setLoading(true);
-    setError("");
-    try {
+    await execute(async () => {
       const result = await matchResumeToJob(selectedId, jobDescription);
-      if (!result.success) {
-        setError(result.error);
-      } else {
-        setMatch(result.data);
-        setAnalysis(null);
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Match failed");
-    }
-    pendingRef.current = false;
-    setLoading(false);
+      if (!result.success) return result.error;
+      setMatch(result.data);
+      setAnalysis(null);
+      return null;
+    });
   }
 
   const analysisSections = analysis
@@ -81,91 +66,63 @@ export default function AnalyzePage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground tracking-tight">
-          Analyze Resume
-        </h1>
-        <p className="text-muted mt-1">
-          Run ATS analysis or match a resume to a specific job description
-        </p>
-      </div>
+      <PageHeader
+        icon={<BarChart3 className="h-6 w-6" />}
+        title="Analyze Resume"
+        description="Run ATS analysis or match a resume to a specific job description"
+      />
 
-      <Card>
+      <Card className="animate-slide-up stagger-1">
         <CardContent className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 space-y-1.5">
-              <label className="block text-sm font-medium text-foreground">
-                Select Resume
-              </label>
-              <select
-                value={selectedId}
-                onChange={(e) => setSelectedId(e.target.value)}
-                className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-              >
-                <option value="">Choose a resume...</option>
-                {resumes.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+          <ResumeSelector
+            resumes={resumes}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+          />
 
-          <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-foreground">
-              Job Description
-            </label>
-            <textarea
-              className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-indigo-500/40 min-h-[120px] resize-y"
-              placeholder="Paste job description here for targeted analysis (optional)"
-              value={jobDescription}
-              onChange={(e) => setJobDescription(e.target.value)}
-            />
-          </div>
+          <JobDescriptionInput
+            value={jobDescription}
+            onChange={setJobDescription}
+          />
 
           <div className="flex flex-wrap gap-3">
             <Button
               onClick={handleAnalyze}
-              disabled={loading || !selectedId}
-              loading={loading && !match}
+              disabled={isPending || !selectedId}
+              loading={isPending}
             >
-              {loading && !match ? "Analyzing..." : "Run ATS Analysis"}
+              {isPending ? "Analyzing..." : "Run ATS Analysis"}
             </Button>
             <Button
               onClick={handleMatch}
-              disabled={loading || !selectedId || !jobDescription.trim()}
+              disabled={isPending || !selectedId || !jobDescription.trim()}
               variant="secondary"
-              loading={loading && !!match}
+              loading={isPending}
             >
-              {loading && match ? "Matching..." : "Match to Job"}
+              {isPending ? "Matching..." : "Match to Job"}
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {error && (
-        <div className="rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/30 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
-          {error}
-        </div>
-      )}
+      {error && <ErrorBanner message={error} onDismiss={reset} />}
 
       {analysis && (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-fade-in">
           <Card>
             <CardHeader>
-              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2.5">
                 <span className="w-1.5 h-5 rounded-full bg-gradient-primary inline-block" />
                 ATS Analysis Results
               </h2>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4 p-4 rounded-xl bg-surface border">
+            <CardContent className="space-y-5">
+              <div className="flex items-center gap-5 p-4 rounded-xl bg-surface/60 border border-border/60">
                 <div
                   className={`w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold text-white shadow-sm ${
-                    analysis.atsScore >= 70
+                    scoreToVariant(analysis.atsScore) === "success"
                       ? "bg-gradient-success"
-                      : analysis.atsScore >= 40
+                      : scoreToVariant(analysis.atsScore) === "warning"
                         ? "bg-gradient-warning"
                         : "bg-gradient-error"
                   }`}
@@ -190,17 +147,22 @@ export default function AnalyzePage() {
 
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {analysisSections.map((s) => (
-                  <div key={s.label} className="rounded-xl bg-surface border p-3">
-                    <div className="text-xs text-muted mb-1">{s.label}</div>
-                    <div className="text-lg font-bold text-foreground">
+                  <div
+                    key={s.label}
+                    className="rounded-xl bg-surface/60 border border-border/60 p-3 space-y-1.5"
+                  >
+                    <div className="text-xs font-medium text-muted uppercase tracking-wider">
+                      {s.label}
+                    </div>
+                    <div className="text-lg font-bold text-foreground tabular-nums">
                       {s.value}
                     </div>
-                    <div className="w-full h-1.5 rounded-full bg-border mt-2 overflow-hidden">
+                    <div className="w-full h-1 rounded-full bg-border/60 overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          s.value >= 70
+                        className={`h-full rounded-full transition-all duration-700 ease-out ${
+                          scoreToVariant(s.value) === "success"
                             ? "bg-gradient-success"
-                            : s.value >= 40
+                            : scoreToVariant(s.value) === "warning"
                               ? "bg-gradient-warning"
                               : "bg-gradient-error"
                         }`}
@@ -216,14 +178,14 @@ export default function AnalyzePage() {
                   <h3 className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-2">
                     Strengths
                   </h3>
-                  <ul className="space-y-1">
+                  <ul className="space-y-1.5">
                     {analysis.strengths.map((s, i) => (
                       <li
                         key={i}
                         className="flex items-start gap-2 text-sm text-foreground"
                       >
-                        <svg className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        <svg className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 13l4 4L19 7" />
                         </svg>
                         {s}
                       </li>
@@ -237,14 +199,14 @@ export default function AnalyzePage() {
                   <h3 className="text-sm font-semibold text-rose-600 dark:text-rose-400 mb-2">
                     Weaknesses
                   </h3>
-                  <ul className="space-y-1">
+                  <ul className="space-y-1.5">
                     {analysis.weaknesses.map((w, i) => (
                       <li
                         key={i}
                         className="flex items-start gap-2 text-sm text-foreground"
                       >
-                        <svg className="w-4 h-4 text-rose-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        <svg className="w-4 h-4 text-rose-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M6 18L18 6M6 6l12 12" />
                         </svg>
                         {w}
                       </li>
@@ -273,7 +235,7 @@ export default function AnalyzePage() {
                   <h3 className="text-sm font-semibold text-foreground mb-2">
                     Recommendations
                   </h3>
-                  <ul className="space-y-2">
+                  <ul className="space-y-2.5">
                     {analysis.recommendations.map((r, i) => (
                       <li
                         key={i}
@@ -294,9 +256,9 @@ export default function AnalyzePage() {
       )}
 
       {match && (
-        <Card>
+        <Card className="animate-fade-in">
           <CardHeader>
-            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2.5">
               <span className="w-1.5 h-5 rounded-full bg-gradient-accent inline-block" />
               Job Match Results
             </h2>
@@ -304,10 +266,10 @@ export default function AnalyzePage() {
           <CardContent className="space-y-6">
             <div className="flex items-center gap-6">
               <div
-                className={`w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white shadow-sm ${
-                  match.matchPercentage >= 70
+                className={`w-20 h-20 rounded-2xl flex items-center justify-center text-2xl font-bold text-white shadow-sm ${
+                  scoreToVariant(match.matchPercentage) === "success"
                     ? "bg-gradient-success"
-                    : match.matchPercentage >= 40
+                    : scoreToVariant(match.matchPercentage) === "warning"
                       ? "bg-gradient-warning"
                       : "bg-gradient-error"
                 }`}
@@ -326,7 +288,7 @@ export default function AnalyzePage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {match.matchingSkills.length > 0 && (
-                <div className="rounded-xl bg-surface border p-4">
+                <div className="rounded-xl bg-surface/60 border border-border/60 p-4">
                   <h3 className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-2">
                     Matching Skills
                   </h3>
@@ -341,7 +303,7 @@ export default function AnalyzePage() {
               )}
 
               {match.missingSkills.length > 0 && (
-                <div className="rounded-xl bg-surface border p-4">
+                <div className="rounded-xl bg-surface/60 border border-border/60 p-4">
                   <h3 className="text-sm font-semibold text-rose-600 dark:text-rose-400 mb-2">
                     Missing Skills
                   </h3>
@@ -361,7 +323,7 @@ export default function AnalyzePage() {
                 <h3 className="text-sm font-semibold text-foreground mb-2">
                   Suggestions
                 </h3>
-                <ul className="space-y-2">
+                <ul className="space-y-2.5">
                   {match.suggestions.map((s, i) => (
                     <li
                       key={i}

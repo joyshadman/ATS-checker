@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteResume } from "@/actions/resume";
 import { improveResume } from "@/actions/improve";
@@ -9,6 +9,9 @@ import { analyzeResume, matchResumeToJob } from "@/actions/analysis";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { ErrorBanner } from "@/components/ui/error-banner";
+import { JobDescriptionInput } from "@/components/ui/job-description-input";
+import { useAsyncAction } from "@/hooks/use-async-action";
 
 type Props = {
   resumeId: string;
@@ -24,97 +27,70 @@ export function ResumeActions({
   hasInterview,
 }: Props) {
   const router = useRouter();
-  const [loading, setLoading] = useState<string | null>(null);
-  const [error, setError] = useState("");
+  const { isPending, error, execute, reset } = useAsyncAction();
+  const [activeAction, setActiveAction] = useState<string | null>(null);
   const [showJobMatch, setShowJobMatch] = useState(false);
   const [jobDescription, setJobDescription] = useState("");
-  const pendingRef = useRef(false);
 
   async function handleAction(action: string, fn: () => Promise<{ success: boolean; error?: string }>) {
-    if (pendingRef.current) return;
-    pendingRef.current = true;
-    setLoading(action);
-    setError("");
-    try {
-      const result = await fn();
-      if (!result.success) {
-        setError(result.error ?? `${action} failed`);
-      } else {
-        router.refresh();
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : `${action} failed`);
-    }
-    pendingRef.current = false;
-    setLoading(null);
+    setActiveAction(action);
+    const result = await execute(async () => {
+      const res = await fn();
+      if (!res.success) return res.error ?? `${action} failed`;
+      router.refresh();
+      return null;
+    });
+    setActiveAction(null);
+    return result;
   }
 
   async function handleJobMatch() {
     if (!jobDescription.trim()) return;
-    if (pendingRef.current) return;
-    pendingRef.current = true;
-    setLoading("match");
-    setError("");
-    try {
-      const result = await matchResumeToJob(resumeId, jobDescription);
-      if (!result.success) {
-        setError(result.error);
-      } else {
-        router.refresh();
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Job match failed");
-    }
-    pendingRef.current = false;
-    setLoading(null);
+    await handleAction("match", () => matchResumeToJob(resumeId, jobDescription));
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-2">
         {!hasAnalysis && (
           <Button
-            onClick={() =>
-              handleAction("analyze", () => analyzeResume(resumeId))
-            }
-            loading={loading === "analyze"}
-            disabled={loading !== null}
+            onClick={() => handleAction("analyze", () => analyzeResume(resumeId))}
+            loading={activeAction === "analyze"}
+            disabled={isPending}
+            size="sm"
           >
-            {loading === "analyze" ? "Analyzing..." : "Run ATS Analysis"}
+            {activeAction === "analyze" ? "Analyzing..." : "Run ATS Analysis"}
           </Button>
         )}
 
         {!hasImprovement && (
           <Button
-            onClick={() =>
-              handleAction("improve", () => improveResume(resumeId))
-            }
+            onClick={() => handleAction("improve", () => improveResume(resumeId))}
             variant="secondary"
-            loading={loading === "improve"}
-            disabled={loading !== null}
+            loading={activeAction === "improve"}
+            disabled={isPending}
+            size="sm"
           >
-            {loading === "improve" ? "Improving..." : "Improve Resume"}
+            {activeAction === "improve" ? "Improving..." : "Improve Resume"}
           </Button>
         )}
 
         {!hasInterview && (
           <Button
-            onClick={() =>
-              handleAction("interview", () =>
-                generateInterviewQuestions(resumeId)
-              )
-            }
+            onClick={() => handleAction("interview", () => generateInterviewQuestions(resumeId))}
             variant="secondary"
-            loading={loading === "interview"}
-            disabled={loading !== null}
+            loading={activeAction === "interview"}
+            disabled={isPending}
+            size="sm"
           >
-            {loading === "interview" ? "Generating..." : "Interview Questions"}
+            {activeAction === "interview" ? "Generating..." : "Interview Questions"}
           </Button>
         )}
 
         <Button
           onClick={() => setShowJobMatch(!showJobMatch)}
           variant="outline"
+          size="sm"
         >
           {showJobMatch ? "Cancel Job Match" : "Match to Job"}
         </Button>
@@ -125,11 +101,12 @@ export function ResumeActions({
             if (result.success) {
               router.push("/dashboard");
             } else {
-              setError(result.error);
+              reset();
             }
           }}
           variant="danger"
-          disabled={loading !== null}
+          disabled={isPending}
+          size="sm"
         >
           Delete
         </Button>
@@ -139,36 +116,30 @@ export function ResumeActions({
         <Card variant="flat">
           <CardContent>
             <div className="flex flex-col sm:flex-row gap-3">
-              <textarea
-                className="flex-1 rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-indigo-500/40 min-h-[80px] resize-y"
-                placeholder="Paste the job description to match against this resume..."
+              <JobDescriptionInput
                 value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
+                onChange={setJobDescription}
+                placeholder="Paste the job description to match against this resume..."
               />
               <Button
                 onClick={handleJobMatch}
-                loading={loading === "match"}
-                disabled={loading !== null || !jobDescription.trim()}
+                loading={activeAction === "match"}
+                disabled={isPending || !jobDescription.trim()}
                 className="self-start sm:self-end shrink-0"
+                size="sm"
               >
-                {loading === "match" ? "Matching..." : "Match"}
+                {activeAction === "match" ? "Matching..." : "Match"}
               </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {error && (
-        <div className="rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/30 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
-          {error}
-        </div>
-      )}
+      {error && <ErrorBanner message={error} onDismiss={reset} />}
 
       <div className="flex flex-wrap gap-2">
         {hasAnalysis && <Badge variant="success">ATS analysis done</Badge>}
-        {hasImprovement && (
-          <Badge variant="info">Improvement generated</Badge>
-        )}
+        {hasImprovement && <Badge variant="info">Improvement generated</Badge>}
         {hasInterview && (
           <Badge variant="primary">Interview questions ready</Badge>
         )}

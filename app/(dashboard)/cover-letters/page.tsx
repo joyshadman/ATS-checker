@@ -1,10 +1,21 @@
+import type { Metadata } from "next";
 import { getCoverLetters } from "@/actions/cover-letter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 
+export const metadata: Metadata = {
+  title: "Cover Letters",
+  description: "Manage your uploaded cover letters with ATS compatibility scores.",
+};
+
 export default async function CoverLettersPage() {
-  let coverLetters: { id: string; title: string | null; score: number | null; createdAt: Date }[] = [];
+  let coverLetters: {
+    id: string;
+    title: string | null;
+    score: number | null;
+    createdAt: Date;
+  }[] = [];
   try {
     const result = await getCoverLetters();
     if (result.success) coverLetters = result.data;
@@ -14,22 +25,22 @@ export default async function CoverLettersPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div>
+      <div className="animate-slide-up">
         <h1 className="text-3xl font-bold text-foreground tracking-tight">
           Cover Letters
         </h1>
-        <p className="text-muted mt-1">
+        <p className="text-muted mt-1 text-sm">
           Manage your uploaded cover letters
         </p>
       </div>
 
       {coverLetters.length === 0 ? (
-        <Card variant="flat">
+        <Card variant="flat" className="animate-fade-in">
           <CardContent>
             <div className="text-center py-16">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-warning/10 flex items-center justify-center mx-auto mb-4">
-                <svg className="w-7 h-7 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              <div className="w-20 h-20 rounded-2xl bg-gradient-warning/10 flex items-center justify-center mx-auto mb-5">
+                <svg className="w-10 h-10 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </div>
               <h3 className="text-lg font-semibold text-foreground mb-1">
@@ -37,7 +48,10 @@ export default async function CoverLettersPage() {
               </h3>
               <p className="text-sm text-muted">
                 Upload your first cover letter from the{" "}
-                <Link href="/dashboard" className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
+                <Link
+                  href="/dashboard"
+                  className="text-foreground hover:text-accent font-medium transition-colors"
+                >
                   dashboard
                 </Link>
               </p>
@@ -46,14 +60,18 @@ export default async function CoverLettersPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {coverLetters.map((cl) => (
+          {coverLetters.map((cl, i) => (
             <Link key={cl.id} href={`/cover-letters/${cl.id}`}>
-              <Card hover className="h-full">
+              <Card
+                hover
+                className={`h-full animate-slide-up`}
+                style={{ animationDelay: `${(i + 1) * 50}ms` }}
+              >
                 <CardContent>
                   <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-warning/10 flex items-center justify-center shrink-0">
-                      <svg className="w-4.5 h-4.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    <div className="w-10 h-10 rounded-xl bg-gradient-warning/10 flex items-center justify-center shrink-0">
+                      <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
                     </div>
                     <div className="min-w-0 flex-1">
@@ -70,7 +88,7 @@ export default async function CoverLettersPage() {
                     </div>
                   </div>
                   {cl.score != null && (
-                    <div className="mt-3 pt-3 border-t border-border">
+                    <div className="mt-3 pt-3 border-t border-border/60">
                       <Badge
                         variant={
                           cl.score >= 70

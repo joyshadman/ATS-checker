@@ -10,7 +10,13 @@ type Props = {
   children: ReactNode;
 };
 
-export function Dialog({ open, onClose, title, description, children }: Props) {
+export function Dialog({
+  open,
+  onClose,
+  title,
+  description,
+  children,
+}: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,11 +51,14 @@ export function Dialog({ open, onClose, title, description, children }: Props) {
       aria-modal="true"
       aria-labelledby="dialog-title"
     >
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
-      <div className="relative w-full max-w-md rounded-2xl border bg-card shadow-float p-6 space-y-4 animate-in fade-in zoom-in duration-200">
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm animate-fade-in" />
+      <div className="relative w-full max-w-md rounded-2xl border bg-card shadow-float p-6 space-y-4 animate-scale-in">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
-            <h2 id="dialog-title" className="text-lg font-semibold text-foreground">
+            <h2
+              id="dialog-title"
+              className="text-lg font-semibold text-foreground"
+            >
               {title}
             </h2>
             {description && (
@@ -61,8 +70,16 @@ export function Dialog({ open, onClose, title, description, children }: Props) {
             className="rounded-lg p-1.5 text-muted hover:text-foreground hover:bg-surface transition-colors"
             aria-label="Close"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 6L6 18M6 6l12 12" />
             </svg>
           </button>
         </div>

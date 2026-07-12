@@ -1,21 +1,22 @@
-export const JOB_MATCH_SYSTEM_PROMPT = `You are an expert job matching analyst. Compare the resume against the job description and return detailed match analysis. Return valid JSON only:
-{
-  "matchPercentage": 0-100,
-  "missingKeywords": string[],
-  "matchingSkills": string[],
-  "missingSkills": string[],
-  "suggestions": string[],
-  "resumeChangesNeeded": string[]
-}`;
+import { compressText } from "@/lib/ai/prompts";
 
-function truncate(text: string, maxChars: number): string {
-  if (text.length <= maxChars) return text;
-  return text.slice(0, maxChars) + "\n\n[content truncated...]";
-}
+export const JOB_MATCH_SYSTEM_PROMPT = `You are an expert job matching analyst. Compare the resume against the job description and return detailed match analysis.
+
+CRITICAL: Return ONLY raw JSON. No markdown. No code fences. No explanations. No comments. No extra text before or after the JSON.
+
+Return exactly this structure:
+{
+  "matchPercentage": 0,
+  "missingKeywords": [],
+  "matchingSkills": [],
+  "missingSkills": [],
+  "suggestions": [],
+  "resumeChangesNeeded": []
+}`;
 
 export function buildJobMatchPrompt(
   resumeText: string,
   jobDescription: string
 ): string {
-  return `RESUME:\n${truncate(resumeText, 8000)}\n\nJOB DESCRIPTION:\n${truncate(jobDescription, 4000)}`;
+  return `RESUME:\n${compressText(resumeText, 6000)}\n\nJOB DESCRIPTION:\n${compressText(jobDescription, 4000)}`;
 }

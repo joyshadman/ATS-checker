@@ -22,22 +22,40 @@ const ToastContext = createContext<ToastContextType | null>(null);
 
 let nextId = 0;
 
-const icons: Record<Toast["type"], string> = {
-  success: "✓",
-  error: "✕",
-  info: "ℹ",
-  warning: "⚠",
+const icons: Record<Toast["type"], ReactNode> = {
+  success: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 12l2 2 4-4" />
+      <circle cx="12" cy="12" r="10" />
+    </svg>
+  ),
+  error: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M15 9l-6 6M9 9l6 6" />
+    </svg>
+  ),
+  info: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 16v-4M12 8h.01" />
+    </svg>
+  ),
+  warning: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+    </svg>
+  ),
 };
 
 const styles: Record<Toast["type"], string> = {
   success:
-    "bg-emerald-50 dark:bg-emerald-900/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200",
+    "bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300",
   error:
-    "bg-rose-50 dark:bg-rose-900/40 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200",
-  info:
-    "bg-sky-50 dark:bg-sky-900/40 border-sky-200 dark:border-sky-800 text-sky-800 dark:text-sky-200",
+    "bg-rose-50 dark:bg-rose-950/60 border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-300",
+  info: "bg-sky-50 dark:bg-sky-950/60 border-sky-200 dark:border-sky-800/60 text-sky-700 dark:text-sky-300",
   warning:
-    "bg-amber-50 dark:bg-amber-900/40 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200",
+    "bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800/60 text-amber-700 dark:text-amber-300",
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -51,7 +69,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         setToasts((prev) => prev.filter((t) => t.id !== id));
       }, 4000);
     },
-    []
+    [],
   );
 
   return (
@@ -61,18 +79,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`pointer-events-auto flex items-start gap-3 rounded-2xl border px-5 py-4 shadow-float text-sm font-medium backdrop-blur-sm transition-all duration-300 animate-in slide-in-from-right-2 ${styles[t.type]}`}
+            className={`pointer-events-auto flex items-start gap-3 rounded-2xl border px-5 py-4 shadow-float text-sm font-medium backdrop-blur-xl animate-slide-up ${styles[t.type]}`}
           >
             <span className="mt-0.5 shrink-0">{icons[t.type]}</span>
-            <span>{t.message}</span>
+            <span className="flex-1">{t.message}</span>
             <button
               onClick={() =>
                 setToasts((prev) => prev.filter((x) => x.id !== t.id))
               }
-              className="ml-auto shrink-0 opacity-60 hover:opacity-100 transition-opacity"
+              className="ml-auto shrink-0 opacity-50 hover:opacity-100 transition-opacity"
               aria-label="Dismiss"
             >
-              ✕
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
             </button>
           </div>
         ))}

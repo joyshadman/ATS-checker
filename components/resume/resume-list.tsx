@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useToast } from "@/components/ui/toast";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 type Resume = {
@@ -30,7 +29,7 @@ export function ResumeList({ resumes: initial }: { resumes: Resume[] }) {
       ? initial.filter(
           (r) =>
             r.title.toLowerCase().includes(q) ||
-            (r.atsScore != null && String(r.atsScore).includes(q))
+            (r.atsScore != null && String(r.atsScore).includes(q)),
         )
       : [...initial];
 
@@ -67,7 +66,7 @@ export function ResumeList({ resumes: initial }: { resumes: Resume[] }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 animate-slide-up stagger-1">
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1 relative">
           <svg
@@ -75,13 +74,11 @@ export function ResumeList({ resumes: initial }: { resumes: Resume[] }) {
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
+            <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <Input
             type="text"
@@ -94,7 +91,7 @@ export function ResumeList({ resumes: initial }: { resumes: Resume[] }) {
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value as SortKey)}
-          className="rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+          className="rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all"
         >
           <option value="newest">Newest first</option>
           <option value="oldest">Oldest first</option>
@@ -103,10 +100,10 @@ export function ResumeList({ resumes: initial }: { resumes: Resume[] }) {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded-2xl border-2 border-dashed border-border bg-surface/50 py-16 text-center">
-          <div className="w-12 h-12 rounded-xl bg-gradient-primary/10 flex items-center justify-center mx-auto mb-3">
-            <svg className="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        <div className="rounded-2xl border-2 border-dashed border-border/60 bg-surface/30 py-16 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-primary/10 flex items-center justify-center mx-auto mb-4">
+            <svg className="w-7 h-7 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
           <p className="text-sm font-medium text-foreground">
@@ -120,7 +117,7 @@ export function ResumeList({ resumes: initial }: { resumes: Resume[] }) {
         </div>
       ) : (
         <div className="space-y-2">
-          {filtered.map((r) => {
+          {filtered.map((r, i) => {
             const scoreVariant =
               r.atsScore != null
                 ? r.atsScore >= 70
@@ -133,12 +130,13 @@ export function ResumeList({ resumes: initial }: { resumes: Resume[] }) {
               <Link
                 key={r.id}
                 href={`/resumes/${r.id}`}
-                className="flex items-center justify-between rounded-2xl border bg-card px-5 py-4 hover:bg-card-hover hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200 group"
+                className="flex items-center justify-between rounded-2xl border bg-card px-5 py-4 hover:bg-card-hover hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200 group animate-slide-up"
+                style={{ animationDelay: `${(i + 2) * 40}ms` }}
               >
                 <div className="flex items-center gap-4 min-w-0 flex-1">
                   <div className="w-10 h-10 rounded-xl bg-gradient-card flex items-center justify-center shrink-0">
-                    <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
                   <div className="min-w-0">
@@ -161,27 +159,17 @@ export function ResumeList({ resumes: initial }: { resumes: Resume[] }) {
                   <button
                     onClick={(e) => handleDelete(r.id, e)}
                     disabled={deleting === r.id}
-                    className="rounded-lg p-1.5 text-muted opacity-0 group-hover:opacity-100 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all disabled:opacity-50"
+                    className="rounded-lg p-1.5 text-muted opacity-0 group-hover:opacity-100 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all disabled:opacity-50"
                     aria-label="Delete resume"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>
                 </div>
               </Link>
             );
           })}
-        </div>
-      )}
-
-      {initial.length > 0 && (
-        <div className="text-center">
-          <Link href="/dashboard">
-            <Button variant="outline" size="sm">
-              Upload New Resume
-            </Button>
-          </Link>
         </div>
       )}
     </div>

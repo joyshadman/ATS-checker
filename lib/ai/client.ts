@@ -1,39 +1,30 @@
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
 import { getBaseURL } from "@/lib/auth/url";
+import { DEFAULT_MODEL } from "@/lib/ai/models";
+import { compressText } from "@/lib/ai/prompts";
 
-// ───── Configuration ─────
+// ───── Env ─────
 
-const OPENROUTER_BASE_URL =
+const API_KEY = process.env.OPENROUTER_API_KEY;
+const BASE_URL =
   process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1";
-const OPENROUTER_API_URL = `${OPENROUTER_BASE_URL}/chat/completions`;
 const TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS) || 30_000;
-
-const FALLBACK_MODELS = [
-  "openai/gpt-oss-120b:free",
-  "google/gemini-2.5-flash:free",
-  "deepseek/deepseek-v3:free",
-  "qwen/qwen3:free",
-];
-
-const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
-const RETRY_DELAYS = [1000, 2000, 4000];
-
-const CACHE_TTL_MS = 5 * 60 * 1000;
-
-const isDev = process.env.NODE_ENV === "development";
+const MODEL = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
+const MAX_RETRIES = 2;
+const RETRYABLE_STATUSES = new Set([500, 502, 503]);
 
 // ───── Types ─────
 
 export type AIErrorCode =
   | "RATE_LIMIT"
-  | "PROVIDER_DOWN"
   | "TIMEOUT"
   | "AUTH_ERROR"
   | "FORBIDDEN"
   | "CREDITS_EXHAUSTED"
   | "MODEL_UNAVAILABLE"
-  | "ALL_PROVIDERS_FAILED"
+  | "PROVIDER_ERROR"
   | "INVALID_RESPONSE"
+  | "INVALID_REQUEST"
   | "UNKNOWN";
 
 export type AIResult<T> =
@@ -42,22 +33,23 @@ export type AIResult<T> =
       success: false;
       code: AIErrorCode;
       error: string;
-      retryable: boolean;
-      retryAfterMs?: number;
+      retryable?: boolean;
     };
 
-// ───── In-flight dedup ─────
+// ───── SHA-256 response cache (keyed by system + user) ─────
 
-const inFlight = new Map<string, Promise<AIResult<unknown>>>();
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const responseCache = new Map<
+  string,
+  { data: AIResult<unknown>; ts: number }
+>();
 
-// ───── Response Cache (keyed by system + user prompt, model-agnostic) ─────
+function sha256(input: string): string {
+  return createHash("sha256").update(input).digest("hex");
+}
 
-const responseCache = new Map<string, { data: AIResult<unknown>; ts: number }>();
-
-function cacheKey(systemPrompt: string, userPrompt: string): string {
-  return createHash("md5")
-    .update(`${systemPrompt}|${userPrompt}`)
-    .digest("hex");
+function cacheKey(system: string, user: string): string {
+  return sha256(`${system}\x00${user}`);
 }
 
 function cacheGet(key: string): AIResult<unknown> | null {
@@ -71,20 +63,62 @@ function cacheGet(key: string): AIResult<unknown> | null {
 }
 
 function cacheSet(key: string, data: AIResult<unknown>): void {
-  if (responseCache.size >= 100) {
-    const first = responseCache.keys().next().value;
-    if (first) responseCache.delete(first);
+  if (responseCache.size >= 200) {
+    const oldest = responseCache.keys().next().value;
+    if (oldest) responseCache.delete(oldest);
   }
   responseCache.set(key, { data, ts: Date.now() });
 }
 
-// ───── Dev logging ─────
+// ───── In-flight dedup (keyed by dedupKey, per-process) ─────
+
+const inFlight = new Map<string, Promise<AIResult<unknown>>>();
+
+// ───── Recent results cache (keeps completed results for 30s to catch sequential duplicates) ─────
+
+const RECENT_TTL_MS = 30_000;
+const recentResults = new Map<
+  string,
+  { data: AIResult<unknown>; ts: number }
+>();
+
+function recentGet(key: string): AIResult<unknown> | null {
+  const entry = recentResults.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > RECENT_TTL_MS) {
+    recentResults.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function recentSet(key: string, data: AIResult<unknown>): void {
+  if (recentResults.size >= 500) {
+    const oldest = recentResults.keys().next().value;
+    if (oldest) recentResults.delete(oldest);
+  }
+  recentResults.set(key, { data, ts: Date.now() });
+}
+
+// ───── Request counter ─────
 
 let reqCounter = 0;
 
-function devLog(event: string, meta: Record<string, unknown>): void {
-  if (!isDev) return;
-  console.log(`[AI] ${event}`, JSON.stringify(meta));
+// ───── Structured logging ─────
+
+function log(status: string, meta: Record<string, unknown>): void {
+  const fields = [
+    `id=${meta.reqId ?? "?"}`,
+    `model=${MODEL}`,
+    `status=${status}`,
+  ];
+  if (meta.duration) fields.push(`duration=${meta.duration}`);
+  if (meta.tokens != null) fields.push(`tokens=${meta.tokens}`);
+  if (meta.cached != null) fields.push(`cached=${meta.cached}`);
+  if (meta.error) fields.push(`error=${meta.error}`);
+
+  const line = fields.join(" ");
+  console.log(`[AI] ${line}`);
 }
 
 // ───── Public API ─────
@@ -94,39 +128,61 @@ export async function callAI<T = unknown>(
   userPrompt: string,
   dedupKey?: string,
 ): Promise<AIResult<T>> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
+  const reqId = ++reqCounter;
+  const startTime = Date.now();
+
+  if (!API_KEY) {
+    log("fail", {
+      reqId,
+      error: "OPENROUTER_API_KEY not set",
+      duration: "0s",
+    });
     return {
       success: false,
-      code: "UNKNOWN",
+      code: "AUTH_ERROR",
       error: "OPENROUTER_API_KEY is not set. Add it to your .env file.",
-      retryable: false,
     };
   }
 
-  // Check cache (model-agnostic — any model's result serves all)
-  const cKey = cacheKey(systemPrompt, userPrompt);
+  // Compress prompts
+  const compressedSystem = compressText(systemPrompt, 4000);
+  const compressedUser = compressText(userPrompt, 16000);
+
+  // --- Tier 1: SHA-256 response cache (exact same prompts, any time) ---
+  const cKey = cacheKey(compressedSystem, compressedUser);
   const cached = cacheGet(cKey);
   if (cached) {
-    devLog("cache_hit", {});
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    log("ok", { reqId, cached: true, duration: `${elapsed}s` });
     return cached as AIResult<T>;
   }
 
-  // Server-side dedup
+  // --- Tier 2: Recent results cache (same dedupKey, within 30s) ---
+  // Catches sequential duplicates where first request just finished
   if (dedupKey) {
-    const existing = inFlight.get(dedupKey);
-    if (existing) {
-      devLog("dedup_hit", { dedupKey });
-      return (await existing) as AIResult<T>;
+    const recent = recentGet(dedupKey);
+    if (recent) {
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      log("ok", { reqId, cached: "recent", duration: `${elapsed}s` });
+      return recent as AIResult<T>;
     }
   }
 
-  const models = resolveModels();
-  const startTime = Date.now();
-  const reqId = ++reqCounter;
+  // --- Tier 3: In-flight dedup (same dedupKey, concurrent) ---
+  if (dedupKey) {
+    const existing = inFlight.get(dedupKey);
+    if (existing) {
+      log("ok", { reqId, cached: "in-flight", duration: "0s" });
+      return existing as Promise<AIResult<T>>;
+    }
+  }
 
-  const promise = executeWithFallback<T>(
-    models, systemPrompt, userPrompt, apiKey, startTime, reqId,
+  // Build request promise
+  const promise = executeWithRetries<T>(
+    compressedSystem,
+    compressedUser,
+    reqId,
+    startTime,
   );
 
   if (dedupKey) {
@@ -138,106 +194,51 @@ export async function callAI<T = unknown>(
 
   const result = await promise;
 
-  if (result.success) cacheSet(cKey, result);
+  // --- Tier 4: Cache success in SHA-256 cache ---
+  if (result.success) {
+    cacheSet(cKey, result);
+  }
 
-  const duration = Date.now() - startTime;
-  devLog("callAI_complete", { reqId, duration: `${duration}ms`, success: result.success });
+  // --- Tier 5: Cache result in recent results (even failures, to avoid re-running) ---
+  if (dedupKey) {
+    recentSet(dedupKey, result);
+  }
 
   return result;
 }
 
-// ───── Model resolution ─────
+// ───── Execute with exponential backoff (5xx only) ─────
 
-function resolveModels(): string[] {
-  const primary = process.env.OPENROUTER_MODEL;
-  if (!primary) return FALLBACK_MODELS;
-  const fallbacks = FALLBACK_MODELS.filter((m) => m !== primary);
-  return [primary, ...fallbacks];
-}
-
-// ───── Fallback loop ─────
-
-async function executeWithFallback<T>(
-  models: string[],
+async function executeWithRetries<T>(
   systemPrompt: string,
   userPrompt: string,
-  apiKey: string,
-  startTime: number,
   reqId: number,
-): Promise<AIResult<T>> {
-  for (let modelIdx = 0; modelIdx < models.length; modelIdx++) {
-    const model = models[modelIdx];
-    const modelStart = Date.now();
-
-    const result = await executeModelWithRetries<T>(
-      model, systemPrompt, userPrompt, apiKey,
-    );
-
-    const modelDuration = Date.now() - modelStart;
-
-    devLog("model_attempt", {
-      reqId,
-      model,
-      modelIdx,
-      duration: `${modelDuration}ms`,
-      success: result.success,
-    });
-
-    if (result.success) {
-      devLog("model_selected", { reqId, model, duration: `${modelDuration}ms` });
-      return result;
-    }
-
-    // Non-retryable errors (401, 403, credit, etc.) skip all models
-    if (!result.retryable) return result;
-
-    // If this is the last model, don't bother logging fallback
-    if (modelIdx < models.length - 1) {
-      devLog("model_fallback", {
-        reqId,
-        from: model,
-        to: models[modelIdx + 1],
-        code: result.code,
-        duration: `${modelDuration}ms`,
-      });
-    }
-  }
-
-  // All models exhausted
-  return {
-    success: false,
-    code: "ALL_PROVIDERS_FAILED",
-    error:
-      "All AI providers are temporarily unavailable. Please try again in a moment.",
-    retryable: true,
-  };
-}
-
-// ───── Per-model retry ─────
-
-async function executeModelWithRetries<T>(
-  model: string,
-  systemPrompt: string,
-  userPrompt: string,
-  apiKey: string,
+  startTime: number,
 ): Promise<AIResult<T>> {
   let lastError: AIResult<T> | null = null;
 
-  for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt++) {
-    const result = await executeOnce<T>(model, systemPrompt, userPrompt, apiKey);
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      const delay = Math.min(
+        1000 * Math.pow(2, attempt - 1) + Math.random() * 500,
+        8000,
+      );
+      log("retry", { reqId, attempt, delay: `${delay.toFixed(0)}ms` });
+      await sleep(delay);
+    }
+
+    const result = await executeOnce<T>(
+      systemPrompt,
+      userPrompt,
+      reqId,
+      startTime,
+    );
 
     if (result.success) return result;
 
-    lastError = result;
-
-    // Don't retry if not retryable
     if (!result.retryable) return result;
 
-    // Don't retry if we've exhausted max retries
-    if (attempt >= RETRY_DELAYS.length) break;
-
-    const delay = RETRY_DELAYS[attempt] + Math.random() * 500;
-    await sleep(delay);
+    lastError = result;
   }
 
   return lastError!;
@@ -250,31 +251,31 @@ function sleep(ms: number): Promise<void> {
 // ───── Single request ─────
 
 async function executeOnce<T>(
-  model: string,
   systemPrompt: string,
   userPrompt: string,
-  apiKey: string,
+  reqId: number,
+  startTime: number,
 ): Promise<AIResult<T>> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
-    const response = await fetch(OPENROUTER_API_URL, {
+    const response = await fetch(`${BASE_URL}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${API_KEY}`,
         "HTTP-Referer": getBaseURL(),
         "X-Title": "ATS Resume Checker",
       },
       body: JSON.stringify({
-        model,
+        model: MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.2,
-        max_tokens: 1024,
+        temperature: 0.1,
+        max_tokens: 2048,
         response_format: { type: "json_object" },
       }),
       signal: controller.signal,
@@ -283,35 +284,54 @@ async function executeOnce<T>(
     clearTimeout(timer);
 
     if (!response.ok) {
-      return handleError<T>(response);
+      return handleError<T>(response, reqId, startTime);
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
 
     if (!content) {
+      log("fail", {
+        reqId,
+        error: "empty_response",
+        duration: durationStr(startTime),
+      });
       return {
         success: false,
-        code: "PROVIDER_DOWN",
+        code: "PROVIDER_ERROR",
         error: "AI returned an empty response.",
         retryable: true,
       };
     }
 
-    return parseJsonResponse<T>(content);
+    const tokens = data.usage?.total_tokens;
+    log("ok", {
+      reqId,
+      tokens,
+      cached: false,
+      duration: durationStr(startTime),
+    });
+
+    return parseResponse<T>(content);
   } catch (error) {
     clearTimeout(timer);
 
     if (error instanceof DOMException && error.name === "AbortError") {
+      log("fail", {
+        reqId,
+        error: "timeout",
+        duration: durationStr(startTime),
+      });
       return {
         success: false,
         code: "TIMEOUT",
-        error: "AI request timed out. The model may be overloaded — trying another model.",
+        error: "AI request timed out after 30 seconds.",
         retryable: true,
       };
     }
 
     const message = error instanceof Error ? error.message : String(error);
+    log("fail", { reqId, error: message, duration: durationStr(startTime) });
     return {
       success: false,
       code: "UNKNOWN",
@@ -323,108 +343,240 @@ async function executeOnce<T>(
 
 // ───── Error handling ─────
 
-async function handleError<T>(response: Response): Promise<AIResult<T>> {
+async function handleError<T>(
+  response: Response,
+  reqId: number,
+  startTime: number,
+): Promise<AIResult<T>> {
   const status = response.status;
   const errorBody = await response.text().catch(() => "");
   const message = parseErrorBody(errorBody);
-
-  const retryAfter = response.headers.get("Retry-After");
-  const retryAfterMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : undefined;
-
-  console.error(`[AI] API error ${status}: ${message}`);
+  const dur = durationStr(startTime);
 
   if (status === 401) {
+    log("fail", { reqId, error: `401 ${message}`, duration: dur });
     return {
       success: false,
       code: "AUTH_ERROR",
       error: "Invalid API key. Check your OPENROUTER_API_KEY in .env.",
-      retryable: false,
     };
   }
 
   if (status === 403) {
+    log("fail", { reqId, error: `403 ${message}`, duration: dur });
     return {
       success: false,
       code: "FORBIDDEN",
       error: "Access denied. Your API key may not have access to this model.",
-      retryable: false,
     };
   }
 
   if (status === 404) {
+    log("fail", { reqId, error: `404 ${message}`, duration: dur });
     return {
       success: false,
       code: "MODEL_UNAVAILABLE",
-      error: "This model is currently unavailable. Switching to another model...",
-      retryable: false,
+      error: "The configured model does not exist.",
     };
   }
 
   if (status === 429) {
+    log("fail", { reqId, error: `429 ${message}`, duration: dur });
     return {
       success: false,
       code: "RATE_LIMIT",
-      error: "Rate limit exceeded. Trying another model...",
-      retryable: true,
-      retryAfterMs,
+      error:
+        "The selected AI model is temporarily rate limited. Please try again in a minute.",
     };
   }
 
   if (isCreditError(errorBody)) {
+    log("fail", { reqId, error: `credits ${message}`, duration: dur });
     return {
       success: false,
       code: "CREDITS_EXHAUSTED",
       error:
         "Your OpenRouter credits are exhausted. Check your billing at openrouter.ai.",
-      retryable: false,
     };
   }
 
-  if (status >= 500 && RETRYABLE_STATUSES.has(status)) {
+  if (RETRYABLE_STATUSES.has(status)) {
+    log("fail", { reqId, error: `5xx ${status} ${message}`, duration: dur });
     return {
       success: false,
-      code: "PROVIDER_DOWN",
-      error: `Provider error (${status}). Trying another model...`,
+      code: "PROVIDER_ERROR",
+      error: `Provider error (${status}). Retrying...`,
       retryable: true,
-      retryAfterMs,
     };
+  }
+
+  log("fail", { reqId, error: `${status} ${message}`, duration: dur });
+  return {
+    success: false,
+    code: "UNKNOWN",
+    error: `Unexpected API error (${status}).`,
+  };
+}
+
+// ───── Response parsing ─────
+
+function parseResponse<T>(content: string): AIResult<T> {
+  console.log("[AI] Raw response:", content);
+
+  const { data, error } = safeParseAIResponse<T>(content);
+
+  if (data) {
+    return { success: true, data };
   }
 
   return {
     success: false,
-    code: "UNKNOWN",
-    error: `Unexpected API error (${status}). Trying another model...`,
-    retryable: false,
+    code: "INVALID_RESPONSE",
+    error: error!,
+    retryable: true,
   };
 }
 
-// ───── JSON parsing ─────
+// ───── Production-ready JSON extractor ─────
 
-function parseJsonResponse<T>(content: string): AIResult<T> {
+/**
+ * Strips markdown fences, extracts JSON, and validates the response shape.
+ * Returns { data } on success or { error } on failure.
+ */
+function safeParseAIResponse<T>(
+  content: string,
+): { data: T; error: null } | { data: null; error: string } {
+  const cleaned = content
+    .replace(/^```(?:json)?\s*\n?/gim, "")
+    .replace(/```\s*$/gim, "")
+    .trim();
+
+  // 1. Try parsing the cleaned content directly
+  const direct = tryParseJSON<T>(cleaned);
+  if (direct.ok) return { data: direct.data, error: null };
+
+  // 2. Try extracting the first {...} block (handles preamble/trailing text)
+  const extracted = extractFirstJSONObject(cleaned);
+  if (extracted) {
+    const attempt = tryParseJSON<T>(extracted);
+    if (attempt.ok) return { data: attempt.data, error: null };
+  }
+
+  // 3. Try extracting the first [...] block (for array responses like questions)
+  const arrayExtracted = extractFirstJSONArray(cleaned);
+  if (arrayExtracted) {
+    const attempt = tryParseJSON<T>(arrayExtracted);
+    if (attempt.ok) return { data: attempt.data, error: null };
+  }
+
+  const hint = direct.error ?? "Could not extract valid JSON from AI response.";
+  return { data: null, error: hint };
+}
+
+function tryParseJSON<T>(
+  s: string,
+): { ok: true; data: T } | { ok: false; error: string } {
   try {
-    const parsed = JSON.parse(content);
-
+    const parsed = JSON.parse(s);
     if (typeof parsed !== "object" || parsed === null) {
-      return {
-        success: false,
-        code: "INVALID_RESPONSE",
-        error: "AI returned an unexpected format.",
-        retryable: true,
-      };
+      return { ok: false, error: "AI returned a non-object value." };
     }
-
-    return { success: true, data: parsed as T };
-  } catch {
+    return { ok: true, data: parsed as T };
+  } catch (e) {
     return {
-      success: false,
-      code: "INVALID_RESPONSE",
-      error: "AI returned invalid JSON. Trying another model...",
-      retryable: true,
+      ok: false,
+      error: `JSON parse error: ${e instanceof Error ? e.message : String(e)}`,
     };
   }
 }
 
+function extractFirstJSONObject(s: string): string | null {
+  const start = s.indexOf("{");
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+
+  for (let i = start; i < s.length; i++) {
+    const ch = s[i];
+
+    if (escape) {
+      escape = false;
+      continue;
+    }
+
+    if (ch === "\\") {
+      escape = true;
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) continue;
+
+    if (ch === "{") depth++;
+    if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        return s.slice(start, i + 1);
+      }
+    }
+  }
+
+  return null;
+}
+
+function extractFirstJSONArray(s: string): string | null {
+  const start = s.indexOf("[");
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+
+  for (let i = start; i < s.length; i++) {
+    const ch = s[i];
+
+    if (escape) {
+      escape = false;
+      continue;
+    }
+
+    if (ch === "\\") {
+      escape = true;
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) continue;
+
+    if (ch === "[") depth++;
+    if (ch === "]") {
+      depth--;
+      if (depth === 0) {
+        return s.slice(start, i + 1);
+      }
+    }
+  }
+
+  return null;
+}
+
 // ───── Helpers ─────
+
+function durationStr(startTime: number): string {
+  const ms = Date.now() - startTime;
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+}
 
 function parseErrorBody(body: string): string {
   try {
@@ -442,9 +594,6 @@ function isCreditError(body: string): boolean {
     lower.includes("credits") ||
     lower.includes("payment") ||
     lower.includes("billing") ||
-    lower.includes("exceeded_quota") ||
-    lower.includes("exceeded")
+    lower.includes("exceeded_quota")
   );
 }
-
-

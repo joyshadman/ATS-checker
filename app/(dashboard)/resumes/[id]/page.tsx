@@ -1,79 +1,64 @@
+import type { Metadata } from "next";
 import { getResume } from "@/actions/resume";
 import { ResumeActions } from "@/components/resume/resume-actions";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ScoreCircle } from "@/components/ui/score-circle";
 import { notFound } from "next/navigation";
+import { scoreToVariant } from "@/lib/utils";
 
-function ScoreCircle({ score }: { score: number }) {
-  const r = 40;
-  const circ = 2 * Math.PI * r;
-  const offset = circ - (score / 100) * circ;
-  const color =
-    score >= 80
-      ? "stroke-emerald-500"
-      : score >= 60
-        ? "stroke-indigo-500"
-        : score >= 40
-          ? "stroke-amber-500"
-          : "stroke-rose-500";
-  const trackColor =
-    score >= 80
-      ? "stroke-emerald-100 dark:stroke-emerald-900"
-      : score >= 60
-        ? "stroke-indigo-100 dark:stroke-indigo-900"
-        : score >= 40
-          ? "stroke-amber-100 dark:stroke-amber-900"
-          : "stroke-rose-100 dark:stroke-rose-900";
-
-  return (
-    <div className="relative w-28 h-28">
-      <svg className="w-28 h-28 -rotate-90" viewBox="0 0 100 100">
-        <circle
-          cx="50"
-          cy="50"
-          r={r}
-          fill="none"
-          strokeWidth="8"
-          className={trackColor}
-        />
-        <circle
-          cx="50"
-          cy="50"
-          r={r}
-          fill="none"
-          strokeWidth="8"
-          strokeLinecap="round"
-          strokeDasharray={circ}
-          strokeDashoffset={offset}
-          className={`${color} transition-all duration-1000 ease-out`}
-        />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-2xl font-bold text-foreground">{score}</span>
-      </div>
-    </div>
-  );
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const result = await getResume(id);
+  if (!result.success) return { title: "Resume Not Found" };
+  return { title: result.data.title };
 }
 
-function SectionCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: number | null;
-}) {
+type ResumePageData = {
+  id: string;
+  userId: string;
+  title: string;
+  originalText: string | null;
+  improvedText: string | null;
+  atsScore: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+  analyses: Array<{
+    formattingScore: number | null;
+    keywordScore: number | null;
+    skillsScore: number | null;
+    experienceScore: number | null;
+    educationScore: number | null;
+    grammarScore: number | null;
+    readabilityScore: number | null;
+    missingKeywords: string | null;
+    suggestions: string | null;
+    overallImprovements: string | null;
+  }>;
+  interviews: Array<{
+    questions: string | null;
+  }>;
+};
+
+function SectionCard({ label, value }: { label: string; value: number | null }) {
   return (
-    <div className="rounded-xl bg-surface border p-4">
-      <div className="text-xs text-muted mb-1">{label}</div>
-      <div className="text-lg font-bold text-foreground">
+    <div className="rounded-xl bg-surface/60 border border-border/60 p-4 space-y-2">
+      <div className="text-xs font-medium text-muted uppercase tracking-wider">
+        {label}
+      </div>
+      <div className="text-xl font-bold text-foreground tabular-nums">
         {value ?? "—"}
       </div>
-      <div className="w-full h-1.5 rounded-full bg-border mt-2 overflow-hidden">
+      <div className="w-full h-1 rounded-full bg-border/60 overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all duration-500 ${
-            value != null && value >= 70
+          className={`h-full rounded-full transition-all duration-700 ease-out ${
+            value != null && scoreToVariant(value) === "success"
               ? "bg-gradient-success"
-              : value != null && value >= 40
+              : value != null && scoreToVariant(value) === "warning"
                 ? "bg-gradient-warning"
                 : "bg-gradient-error"
           }`}
@@ -90,12 +75,11 @@ export default async function ResumePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let resume: any;
+  let resume: ResumePageData;
   try {
     const result = await getResume(id);
     if (!result.success) notFound();
-    resume = result.data;
+    resume = result.data as ResumePageData;
   } catch {
     notFound();
   }
@@ -125,16 +109,36 @@ export default async function ResumePage({
     ? (JSON.parse(latestAnalysis.overallImprovements as string) as string[])
     : [];
 
+  const badgeVariant = resume.atsScore != null
+    ? scoreToVariant(resume.atsScore) === "success"
+      ? "success"
+      : resume.atsScore >= 60
+        ? "primary"
+        : scoreToVariant(resume.atsScore) === "warning"
+          ? "warning"
+          : "danger"
+    : "default";
+
+  const badgeLabel = resume.atsScore != null
+    ? resume.atsScore >= 80
+      ? "Excellent"
+      : resume.atsScore >= 60
+        ? "Good"
+        : resume.atsScore >= 40
+          ? "Needs Work"
+          : "Poor"
+    : "Pending";
+
   return (
     <div className="max-w-5xl mx-auto space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-slide-up">
         <div>
           <h1 className="text-3xl font-bold text-foreground tracking-tight">
-            {resume.title as string}
+            {resume.title}
           </h1>
-          <p className="text-muted mt-1">
+          <p className="text-muted mt-1 text-sm">
             Uploaded{" "}
-            {new Date(resume.createdAt as string | number | Date).toLocaleDateString(undefined, {
+            {new Date(resume.createdAt).toLocaleDateString(undefined, {
               year: "numeric",
               month: "long",
               day: "numeric",
@@ -143,15 +147,17 @@ export default async function ResumePage({
         </div>
       </div>
 
-      <ResumeActions
-        resumeId={resume.id}
-        hasAnalysis={!!latestAnalysis}
-        hasImprovement={!!resume.improvedText}
-        hasInterview={!!latestInterview}
-      />
+      <div className="animate-slide-up stagger-1">
+        <ResumeActions
+          resumeId={resume.id}
+          hasAnalysis={!!latestAnalysis}
+          hasImprovement={!!resume.improvedText}
+          hasInterview={!!latestInterview}
+        />
+      </div>
 
       {resume.atsScore != null && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-slide-up stagger-2">
           <Card className="lg:col-span-1">
             <CardContent>
               <div className="flex flex-col items-center py-4">
@@ -159,25 +165,8 @@ export default async function ResumePage({
                 <h3 className="text-lg font-semibold text-foreground mt-4">
                   Overall ATS Score
                 </h3>
-                <Badge
-                  variant={
-                    resume.atsScore >= 80
-                      ? "success"
-                      : resume.atsScore >= 60
-                        ? "primary"
-                        : resume.atsScore >= 40
-                          ? "warning"
-                          : "danger"
-                  }
-                  className="mt-1"
-                >
-                  {resume.atsScore >= 80
-                    ? "Excellent"
-                    : resume.atsScore >= 60
-                      ? "Good"
-                      : resume.atsScore >= 40
-                        ? "Needs Work"
-                        : "Poor"}
+                <Badge variant={badgeVariant} className="mt-2">
+                  {badgeLabel}
                 </Badge>
               </div>
             </CardContent>
@@ -193,19 +182,22 @@ export default async function ResumePage({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {suggestions.length > 0 && (
-          <Card>
+          <Card className="animate-slide-up stagger-3">
             <CardHeader>
-              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2.5">
                 <span className="w-1.5 h-5 rounded-full bg-gradient-success inline-block" />
                 Key Strengths
               </h2>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2">
+              <ul className="space-y-2.5">
                 {suggestions.map((s, i) => (
-                  <li key={i} className="flex items-start gap-2.5 text-sm text-foreground">
-                    <svg className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <li
+                    key={i}
+                    className="flex items-start gap-2.5 text-sm text-foreground"
+                  >
+                    <svg className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 13l4 4L19 7" />
                     </svg>
                     {s}
                   </li>
@@ -216,9 +208,9 @@ export default async function ResumePage({
         )}
 
         {missingKeywords.length > 0 && (
-          <Card>
+          <Card className="animate-slide-up stagger-4">
             <CardHeader>
-              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2.5">
                 <span className="w-1.5 h-5 rounded-full bg-gradient-error inline-block" />
                 Missing Keywords
               </h2>
@@ -237,9 +229,9 @@ export default async function ResumePage({
       </div>
 
       {overallImprovements.length > 0 && (
-        <Card>
+        <Card className="animate-slide-up stagger-5">
           <CardHeader>
-            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2.5">
               <span className="w-1.5 h-5 rounded-full bg-gradient-primary inline-block" />
               Improvements
             </h2>
@@ -247,7 +239,10 @@ export default async function ResumePage({
           <CardContent>
             <ul className="space-y-3">
               {overallImprovements.map((r, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-sm text-foreground">
+                <li
+                  key={i}
+                  className="flex items-start gap-2.5 text-sm text-foreground"
+                >
                   <span className="w-5 h-5 rounded-full bg-gradient-primary flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">
                     {i + 1}
                   </span>
@@ -260,30 +255,30 @@ export default async function ResumePage({
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+        <Card className="animate-slide-up">
           <CardHeader>
-            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2.5">
               <span className="w-1.5 h-5 rounded-full bg-gradient-accent inline-block" />
               Original Resume
             </h2>
           </CardHeader>
           <CardContent>
-            <div className="rounded-xl bg-surface border p-4 text-sm text-foreground whitespace-pre-wrap max-h-[500px] overflow-y-auto font-mono leading-relaxed">
+            <div className="rounded-xl bg-surface/60 border border-border/60 p-5 text-sm text-foreground whitespace-pre-wrap max-h-[500px] overflow-y-auto font-mono leading-relaxed">
               {resume.originalText ?? "No text content"}
             </div>
           </CardContent>
         </Card>
 
         {resume.improvedText && (
-          <Card>
+          <Card className="animate-slide-up stagger-1">
             <CardHeader>
-              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2.5">
                 <span className="w-1.5 h-5 rounded-full bg-gradient-success inline-block" />
                 Improved Resume
               </h2>
             </CardHeader>
             <CardContent>
-              <div className="rounded-xl bg-surface border p-4 text-sm text-foreground whitespace-pre-wrap max-h-[500px] overflow-y-auto font-mono leading-relaxed">
+              <div className="rounded-xl bg-surface/60 border border-border/60 p-5 text-sm text-foreground whitespace-pre-wrap max-h-[500px] overflow-y-auto font-mono leading-relaxed">
                 {resume.improvedText}
               </div>
             </CardContent>
@@ -292,31 +287,34 @@ export default async function ResumePage({
       </div>
 
       {latestInterview && latestInterview.questions && (
-        <Card>
+        <Card className="animate-slide-up">
           <CardHeader>
-            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2.5">
               <span className="w-1.5 h-5 rounded-full bg-gradient-warning inline-block" />
               Interview Questions
             </h2>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {(JSON.parse(latestInterview.questions as string) as { type: string; question: string }[]).map(
-                (q, i) => (
-                  <div
-                    key={i}
-                    className="rounded-xl bg-surface border p-4 space-y-2"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Badge variant="primary">{q.type}</Badge>
-                      <span className="text-xs text-muted font-medium">
-                        Q{i + 1}
-                      </span>
-                    </div>
-                    <p className="text-sm text-foreground">{q.question}</p>
+            <div className="space-y-3">
+              {(
+                JSON.parse(latestInterview.questions as string) as {
+                  type: string;
+                  question: string;
+                }[]
+              ).map((q, i) => (
+                <div
+                  key={i}
+                  className="rounded-xl bg-surface/60 border border-border/60 p-4 space-y-2"
+                >
+                  <div className="flex items-center gap-2">
+                    <Badge variant="primary">{q.type}</Badge>
+                    <span className="text-xs text-muted font-medium">
+                      Q{i + 1}
+                    </span>
                   </div>
-                )
-              )}
+                  <p className="text-sm text-foreground">{q.question}</p>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>

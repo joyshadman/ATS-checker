@@ -7,61 +7,57 @@ import {
   buildInterviewPrompt,
 } from "@/lib/prompts/interview";
 import type { InterviewResponse, ActionResult } from "@/types";
-import { safeRequireAuth } from "./auth";
+import { withAction, loadResumeWithAuth } from "@/lib/action-helpers";
 import { revalidatePath } from "next/cache";
 
 export async function generateInterviewQuestions(
   resumeId: string,
   jobDescription?: string
 ): Promise<ActionResult<InterviewResponse>> {
-  try {
-    const auth = await safeRequireAuth();
-    if (!auth.success) return auth;
+  return withAction(
+    async (userId) => {
+      const resume = await loadResumeWithAuth(userId, resumeId);
 
-    const resume = await prisma.resume.findFirst({
-      where: { id: resumeId },
-    });
+      if (!resume.originalText) throw new Error("Resume has no text content");
 
-    if (!resume) return { success: false, error: "Resume not found" };
-    if (!resume.originalText) return { success: false, error: "Resume has no text content" };
+      const existingInterview = await prisma.interview.findFirst({
+        where: { resumeId, questions: { not: null } },
+        orderBy: { createdAt: "desc" },
+      });
+      if (existingInterview?.questions) {
+        revalidatePath(`/resumes/${resumeId}`);
+        return { questions: JSON.parse(existingInterview.questions) };
+      }
 
-    const aiResult = await callAI<InterviewResponse>(
-      INTERVIEW_QUESTIONS_SYSTEM_PROMPT,
-      buildInterviewPrompt(resume.originalText, jobDescription),
-      `interview:${resumeId}`
-    );
+      const aiResult = await callAI<InterviewResponse>(
+        INTERVIEW_QUESTIONS_SYSTEM_PROMPT,
+        buildInterviewPrompt(resume.originalText, jobDescription),
+        `interview:${resumeId}`
+      );
 
-    if (!aiResult.success) return aiResult;
+      if (!aiResult.success) throw new Error(aiResult.error);
 
-    const result = aiResult.data;
+      const result = aiResult.data;
 
-    await prisma.interview.create({
-      data: {
-        resumeId,
-        questions: JSON.stringify(result.questions),
-      },
-    });
+      await prisma.interview.create({
+        data: {
+          resumeId,
+          questions: JSON.stringify(result.questions),
+        },
+      });
 
-    revalidatePath(`/resumes/${resumeId}`);
-    return { success: true, data: result };
-  } catch (error) {
-    console.error("[interview] generateInterviewQuestions error:", error);
-    return { success: false, error: error instanceof Error ? error.message : "Generation failed" };
-  }
+      revalidatePath(`/resumes/${resumeId}`);
+      return result;
+    },
+    { cooldown: true, cooldownKey: `interview:${resumeId}` }
+  );
 }
 
 export async function getInterviews(resumeId: string): Promise<ActionResult<unknown[]>> {
-  try {
-    const auth = await safeRequireAuth();
-    if (!auth.success) return auth;
-
-    const interviews = await prisma.interview.findMany({
+  return withAction(async () => {
+    return prisma.interview.findMany({
       where: { resumeId },
       orderBy: { createdAt: "desc" },
     });
-    return { success: true, data: interviews };
-  } catch (error) {
-    console.error("[interview] getInterviews error:", error);
-    return { success: false, error: "Failed to fetch interviews" };
-  }
+  });
 }

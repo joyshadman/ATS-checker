@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteCoverLetter } from "@/actions/cover-letter";
 import { analyzeCoverLetter } from "@/actions/analysis";
 import { improveCoverLetter } from "@/actions/improve";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ErrorBanner } from "@/components/ui/error-banner";
+import { JobDescriptionInput } from "@/components/ui/job-description-input";
+import { useAsyncAction } from "@/hooks/use-async-action";
 
 type Props = {
   coverLetterId: string;
@@ -15,57 +18,54 @@ type Props = {
 
 export function CoverLetterActions({ coverLetterId, hasImprovement }: Props) {
   const router = useRouter();
-  const [loading, setLoading] = useState<string | null>(null);
-  const [error, setError] = useState("");
+  const { isPending, error, execute, reset } = useAsyncAction();
+  const [activeAction, setActiveAction] = useState<string | null>(null);
   const [jobDescription, setJobDescription] = useState("");
-  const pendingRef = useRef(false);
 
   async function handleAction(action: string, fn: () => Promise<{ success: boolean; error?: string }>) {
-    if (pendingRef.current) return;
-    pendingRef.current = true;
-    setLoading(action);
-    setError("");
-    try {
-      const result = await fn();
-      if (!result.success) {
-        setError(result.error ?? `${action} failed`);
-      } else {
-        router.refresh();
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : `${action} failed`);
-    }
-    pendingRef.current = false;
-    setLoading(null);
+    setActiveAction(action);
+    const result = await execute(async () => {
+      const res = await fn();
+      if (!res.success) return res.error ?? `${action} failed`;
+      router.refresh();
+      return null;
+    });
+    setActiveAction(null);
+    return result;
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-2">
         <Button
           onClick={() =>
             handleAction("analyze", () =>
-              analyzeCoverLetter(coverLetterId, jobDescription || undefined)
+              analyzeCoverLetter(coverLetterId, jobDescription || undefined),
             )
           }
-          loading={loading === "analyze"}
-          disabled={loading !== null}
+          loading={activeAction === "analyze"}
+          disabled={isPending}
+          size="sm"
         >
-          {loading === "analyze" ? "Analyzing..." : "Analyze"}
+          {activeAction === "analyze" ? "Analyzing..." : "Analyze"}
         </Button>
 
         {!hasImprovement && (
           <Button
             onClick={() =>
               handleAction("improve", () =>
-                improveCoverLetter(coverLetterId, jobDescription || undefined)
+                improveCoverLetter(
+                  coverLetterId,
+                  jobDescription || undefined,
+                ),
               )
             }
             variant="secondary"
-            loading={loading === "improve"}
-            disabled={loading !== null}
+            loading={activeAction === "improve"}
+            disabled={isPending}
+            size="sm"
           >
-            {loading === "improve" ? "Improving..." : "Improve"}
+            {activeAction === "improve" ? "Improving..." : "Improve"}
           </Button>
         )}
 
@@ -75,30 +75,26 @@ export function CoverLetterActions({ coverLetterId, hasImprovement }: Props) {
             if (result.success) {
               router.push("/dashboard");
             } else {
-              setError(result.error);
+              reset();
             }
           }}
           variant="danger"
-          disabled={loading !== null}
+          disabled={isPending}
+          size="sm"
         >
           Delete
         </Button>
       </div>
 
-      <textarea
-        className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-indigo-500/40 min-h-[80px] resize-y"
-        placeholder="Paste job description for targeted analysis (optional)"
+      <JobDescriptionInput
         value={jobDescription}
-        onChange={(e) => setJobDescription(e.target.value)}
+        onChange={setJobDescription}
+        placeholder="Paste job description for targeted analysis (optional)"
       />
 
       {hasImprovement && <Badge variant="info">Improvement generated</Badge>}
 
-      {error && (
-        <div className="rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/30 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
-          {error}
-        </div>
-      )}
+      {error && <ErrorBanner message={error} onDismiss={reset} />}
     </div>
   );
 }

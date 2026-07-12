@@ -38,7 +38,7 @@ export function CoverLetterUploadForm() {
         setError("");
       }
     },
-    [validateFile]
+    [validateFile],
   );
 
   const handleFileChange = useCallback(
@@ -49,7 +49,7 @@ export function CoverLetterUploadForm() {
         setError("");
       }
     },
-    [validateFile]
+    [validateFile],
   );
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -94,10 +94,12 @@ export function CoverLetterUploadForm() {
         }}
         onDragLeave={() => setDragging(false)}
         onClick={() => inputRef.current?.click()}
-        className={`relative rounded-2xl border-2 border-dashed p-8 text-center cursor-pointer transition-all duration-150 ${
+        className={`relative rounded-2xl border-2 border-dashed p-8 text-center cursor-pointer transition-all duration-200 ${
           dragging
-            ? "border-amber-400 bg-amber-50 dark:bg-amber-900/20"
-            : "border-border hover:border-amber-300 dark:hover:border-amber-700 bg-surface/50 hover:bg-surface"
+            ? "border-amber-400 bg-amber-50 dark:bg-amber-500/10 scale-[1.01]"
+            : file
+              ? "border-amber-300 dark:border-amber-700/60 bg-amber-50/50 dark:bg-amber-500/5"
+              : "border-border hover:border-amber-300 dark:hover:border-amber-700/60 bg-surface/30 hover:bg-surface/60"
         }`}
       >
         <input
@@ -111,9 +113,9 @@ export function CoverLetterUploadForm() {
 
         {file ? (
           <div className="space-y-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-warning/10 flex items-center justify-center mx-auto">
-              <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            <div className="w-12 h-12 rounded-xl bg-gradient-warning/10 flex items-center justify-center mx-auto">
+              <svg className="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
             <p className="text-sm font-medium text-foreground">{file.name}</p>
@@ -123,26 +125,37 @@ export function CoverLetterUploadForm() {
           </div>
         ) : (
           <div className="space-y-2">
-            <div className="w-10 h-10 rounded-xl bg-surface border flex items-center justify-center mx-auto">
-              <svg className="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            <div className="w-12 h-12 rounded-xl bg-surface border border-border/60 flex items-center justify-center mx-auto">
+              <svg className="w-6 h-6 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
             </div>
             <p className="text-sm text-muted">
-              <span className="font-medium text-foreground">Click to upload</span> or drag and drop
+              <span className="font-medium text-foreground">
+                Click to upload
+              </span>{" "}
+              or drag and drop
             </p>
-            <p className="text-xs text-muted">PDF, DOCX, or TXT (max 10MB)</p>
+            <p className="text-xs text-muted/70">
+              PDF, DOCX, or TXT (max 10MB)
+            </p>
           </div>
         )}
       </div>
 
       {error && (
-        <div className="rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/30 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
+        <div className="rounded-xl border border-rose-200 dark:border-rose-800/60 bg-rose-50 dark:bg-rose-950/60 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
           {error}
         </div>
       )}
 
-      <Button type="submit" disabled={loading || !file} loading={loading} variant="secondary" className="w-full">
+      <Button
+        type="submit"
+        disabled={loading || !file}
+        loading={loading}
+        variant="secondary"
+        className="w-full"
+      >
         {loading ? "Uploading..." : "Upload Cover Letter"}
       </Button>
     </form>

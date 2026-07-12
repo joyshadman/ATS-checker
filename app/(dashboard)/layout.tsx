@@ -22,10 +22,10 @@ export default async function DashboardLayout({
   if (!session) redirect("/auth/login");
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background bg-gradient-mesh">
       <Sidebar email={session.user?.email ?? ""} />
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="sticky top-0 z-20 border-b border-border bg-background/80 backdrop-blur-md">
+        <header className="sticky top-0 z-20 border-b border-border/60 bg-background/70 backdrop-blur-xl">
           <div className="flex items-center justify-end gap-3 px-4 md:px-8 h-14">
             <ThemeToggle />
           </div>

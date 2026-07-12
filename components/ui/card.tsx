@@ -20,7 +20,7 @@ export function Card({
 }: Props) {
   return (
     <div
-      className={`rounded-2xl transition-all duration-200 ${variantStyles[variant]} ${hover ? "hover:shadow-card-hover hover:-translate-y-0.5" : ""} ${className}`}
+      className={`rounded-2xl transition-all duration-200 ${variantStyles[variant]} ${hover ? "hover:shadow-card-hover hover:-translate-y-0.5 cursor-pointer" : ""} ${className}`}
       {...props}
     >
       {children}
@@ -46,7 +46,7 @@ export function CardContent({
   ...props
 }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={`px-6 py-6 ${className}`} {...props}>
+    <div className={`px-6 py-5 ${className}`} {...props}>
       {children}
     </div>
   );

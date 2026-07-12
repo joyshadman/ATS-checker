@@ -3,8 +3,8 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma/db";
 import { parseResumeFile } from "@/lib/parser/resume-parser";
-import { safeRequireAuth } from "./auth";
 import { revalidatePath } from "next/cache";
+import { withAction } from "@/lib/action-helpers";
 import type { ActionResult } from "@/types";
 
 const createCoverLetterSchema = z.object({
@@ -23,87 +23,70 @@ type CoverLetterData = {
 };
 
 export async function uploadCoverLetter(formData: FormData): Promise<ActionResult<CoverLetterData>> {
-  try {
-    const auth = await safeRequireAuth();
-    if (!auth.success) return auth;
-
-    const user = auth.data;
+  return withAction(async (userId) => {
     const title = formData.get("title") as string;
     const file = formData.get("file") as File;
 
     createCoverLetterSchema.parse({ title });
 
     if (!file || file.size === 0) {
-      return { success: false, error: "File is required" };
+      throw new Error("File is required");
+    }
+
+    const allowedTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "text/plain",
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error("Invalid file type. Please upload a PDF, DOCX, or TXT file.");
+    }
+
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new Error("File size must be less than 10MB");
     }
 
     const { text } = await parseResumeFile(file);
 
     const coverLetter = await prisma.coverLetter.create({
       data: {
-        userId: user.id,
+        userId,
         title,
         originalText: text,
       },
     });
 
     revalidatePath("/dashboard");
-    return { success: true, data: coverLetter };
-  } catch (error) {
-    console.error("[cover-letter] uploadCoverLetter error:", error);
-    if (error instanceof z.ZodError) {
-      return { success: false, error: error.issues[0]?.message ?? "Validation failed" };
-    }
-    return { success: false, error: error instanceof Error ? error.message : "Upload failed" };
-  }
+    return coverLetter;
+  });
 }
 
 export async function getCoverLetters(): Promise<ActionResult<CoverLetterData[]>> {
-  try {
-    const auth = await safeRequireAuth();
-    if (!auth.success) return auth;
-
-    const coverLetters = await prisma.coverLetter.findMany({
-      where: { userId: auth.data.id },
+  return withAction(async (userId) => {
+    return prisma.coverLetter.findMany({
+      where: { userId },
       orderBy: { createdAt: "desc" },
     });
-    return { success: true, data: coverLetters };
-  } catch (error) {
-    console.error("[cover-letter] getCoverLetters error:", error);
-    return { success: false, error: "Failed to fetch cover letters" };
-  }
+  });
 }
 
 export async function getCoverLetter(id: string): Promise<ActionResult<CoverLetterData>> {
-  try {
-    const auth = await safeRequireAuth();
-    if (!auth.success) return auth;
-
+  return withAction(async (userId) => {
     const coverLetter = await prisma.coverLetter.findFirst({
-      where: { id, userId: auth.data.id },
+      where: { id, userId },
     });
-
-    if (!coverLetter) return { success: false, error: "Cover letter not found" };
-    return { success: true, data: coverLetter };
-  } catch (error) {
-    console.error("[cover-letter] getCoverLetter error:", error);
-    return { success: false, error: "Failed to fetch cover letter" };
-  }
+    if (!coverLetter) throw new Error("Cover letter not found");
+    return coverLetter;
+  });
 }
 
 export async function deleteCoverLetter(id: string): Promise<ActionResult<void>> {
-  try {
-    const auth = await safeRequireAuth();
-    if (!auth.success) return auth;
-
+  return withAction(async (userId) => {
     await prisma.coverLetter.deleteMany({
-      where: { id, userId: auth.data.id },
+      where: { id, userId },
     });
-
     revalidatePath("/dashboard");
-    return { success: true, data: undefined };
-  } catch (error) {
-    console.error("[cover-letter] deleteCoverLetter error:", error);
-    return { success: false, error: "Failed to delete cover letter" };
-  }
+    return undefined;
+  });
 }

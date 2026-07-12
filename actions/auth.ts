@@ -1,10 +1,11 @@
 "use server";
 
+import { cache } from "react";
 import { auth } from "@/lib/auth/auth";
 import { headers } from "next/headers";
 import type { ActionResult } from "@/types";
 
-export async function getSession() {
+export const getSession = cache(async () => {
   try {
     const hdrs = await headers();
     const session = await auth.api.getSession({ headers: hdrs });
@@ -13,7 +14,7 @@ export async function getSession() {
     console.error("[auth] getSession error:", error);
     return null;
   }
-}
+});
 
 export async function getCurrentUser() {
   try {
