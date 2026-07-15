@@ -21,6 +21,9 @@ export const metadata: Metadata = {
   },
   description:
     "Analyze and improve your resume for ATS compatibility with AI-powered insights. Get scored, matched, and interview-ready.",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export const viewport: Viewport = {
