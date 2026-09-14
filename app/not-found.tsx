@@ -18,7 +18,7 @@ export default function NotFound() {
         </div>
         <Link
           href="/dashboard"
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-primary px-6 py-3 text-sm font-medium text-white hover:brightness-110 transition-all duration-150 shadow-sm active:scale-[0.97]"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-primary px-6 py-3 text-sm font-medium text-cream hover:brightness-110 transition-all duration-150 shadow-sm active:scale-[0.97]"
         >
           <svg
             className="w-4 h-4"

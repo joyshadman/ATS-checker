@@ -96,10 +96,10 @@ export function CoverLetterUploadForm() {
         onClick={() => inputRef.current?.click()}
         className={`relative rounded-2xl border-2 border-dashed p-8 text-center cursor-pointer transition-all duration-200 ${
           dragging
-            ? "border-amber-400 bg-amber-50 dark:bg-amber-500/10 scale-[1.01]"
+            ? "border-accent bg-accent/5 scale-[1.01]"
             : file
-              ? "border-amber-300 dark:border-amber-700/60 bg-amber-50/50 dark:bg-amber-500/5"
-              : "border-border hover:border-amber-300 dark:hover:border-amber-700/60 bg-surface/30 hover:bg-surface/60"
+              ? "border-accent/50 bg-accent/5"
+              : "border-border hover:border-accent/40 bg-surface/30 hover:bg-surface/60"
         }`}
       >
         <input
@@ -113,8 +113,8 @@ export function CoverLetterUploadForm() {
 
         {file ? (
           <div className="space-y-2">
-            <div className="w-12 h-12 rounded-xl bg-gradient-warning/10 flex items-center justify-center mx-auto">
-              <svg className="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+            <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mx-auto">
+              <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
@@ -144,7 +144,7 @@ export function CoverLetterUploadForm() {
       </div>
 
       {error && (
-        <div className="rounded-xl border border-rose-200 dark:border-rose-800/60 bg-rose-50 dark:bg-rose-950/60 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
+        <div className="rounded-xl border border-danger/25 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
         </div>
       )}

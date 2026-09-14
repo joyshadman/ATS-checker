@@ -1,12 +1,19 @@
 import { NextRequest } from "next/server";
-import { DEFAULT_MODEL } from "@/lib/ai/models";
+import { getAIModel } from "@/lib/ai/models";
 import { getBaseURL } from "@/lib/auth/url";
 
 const API_KEY = process.env.OPENROUTER_API_KEY;
-const MODEL = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
 const BASE_URL =
   process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1";
 const TIMEOUT_MS = 30_000;
+
+let MODEL: string;
+try {
+  MODEL = getAIModel();
+} catch (e) {
+  console.error("[AI TEST] FATAL:", e instanceof Error ? e.message : e);
+  MODEL = "";
+}
 
 async function callAI(rawPrompt: string) {
   const controller = new AbortController();
@@ -52,7 +59,10 @@ async function callAI(rawPrompt: string) {
       }
       if (status === 404) {
         return Response.json(
-          { success: false, error: "Configured model not found." },
+          {
+            success: false,
+            error: `Model "${MODEL}" not found on the AI provider.`,
+          },
           { status: 404 }
         );
       }
@@ -116,6 +126,16 @@ export async function GET() {
     );
   }
 
+  if (!MODEL) {
+    return Response.json(
+      {
+        success: false,
+        error: "OPENROUTER_MODEL is not set. Add it to your .env file.",
+      },
+      { status: 500 }
+    );
+  }
+
   const prompt = "Reply with exactly: AI is working successfully.";
   return callAI(prompt);
 }
@@ -124,6 +144,16 @@ export async function POST(request: NextRequest) {
   if (!API_KEY) {
     return Response.json(
       { success: false, error: "OPENROUTER_API_KEY is not set." },
+      { status: 500 }
+    );
+  }
+
+  if (!MODEL) {
+    return Response.json(
+      {
+        success: false,
+        error: "OPENROUTER_MODEL is not set. Add it to your .env file.",
+      },
       { status: 500 }
     );
   }

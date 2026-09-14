@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { getBaseURL } from "@/lib/auth/url";
-import { DEFAULT_MODEL } from "@/lib/ai/models";
+import { getAIModel } from "@/lib/ai/models";
 import { compressText } from "@/lib/ai/prompts";
 
 // ───── Env ─────
@@ -9,9 +9,16 @@ const API_KEY = process.env.OPENROUTER_API_KEY;
 const BASE_URL =
   process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1";
 const TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS) || 30_000;
-const MODEL = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
 const MAX_RETRIES = 2;
 const RETRYABLE_STATUSES = new Set([500, 502, 503]);
+
+let MODEL: string;
+try {
+  MODEL = getAIModel();
+} catch (e) {
+  console.error("[AI] FATAL:", e instanceof Error ? e.message : e);
+  MODEL = "";
+}
 
 // ───── Types ─────
 
@@ -141,6 +148,20 @@ export async function callAI<T = unknown>(
       success: false,
       code: "AUTH_ERROR",
       error: "OPENROUTER_API_KEY is not set. Add it to your .env file.",
+    };
+  }
+
+  if (!MODEL) {
+    log("fail", {
+      reqId,
+      error: "OPENROUTER_MODEL not set",
+      duration: "0s",
+    });
+    return {
+      success: false,
+      code: "MODEL_UNAVAILABLE",
+      error:
+        "AI model is not configured. Set OPENROUTER_MODEL in your .env file.",
     };
   }
 
@@ -372,11 +393,15 @@ async function handleError<T>(
   }
 
   if (status === 404) {
-    log("fail", { reqId, error: `404 ${message}`, duration: dur });
+    log("fail", {
+      reqId,
+      error: `404 model=${MODEL} ${message}`,
+      duration: dur,
+    });
     return {
       success: false,
       code: "MODEL_UNAVAILABLE",
-      error: "The configured model does not exist.",
+      error: `The configured model "${MODEL}" does not exist on the AI provider. Update OPENROUTER_MODEL in your .env.`,
     };
   }
 

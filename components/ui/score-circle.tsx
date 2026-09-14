@@ -26,15 +26,15 @@ export function ScoreCircle({ score, label = "Overall", size = "lg" }: ScoreCirc
   };
 
   const colorMap = {
-    success: "stroke-green-500",
-    warning: "stroke-amber-500",
-    danger: "stroke-red-500",
+    success: "stroke-success",
+    warning: "stroke-warning",
+    danger: "stroke-danger",
   };
 
   return (
     <div className={cn("relative", sizeMap[size])}>
       <svg className="h-full w-full -rotate-90" viewBox="0 0 120 120">
-        <circle cx="60" cy="60" r="50" fill="none" stroke="currentColor" strokeWidth="8" className="text-zinc-800" />
+        <circle cx="60" cy="60" r="50" fill="none" stroke="currentColor" strokeWidth="8" className="text-border" />
         <circle
           cx="60"
           cy="60"
@@ -48,8 +48,8 @@ export function ScoreCircle({ score, label = "Overall", size = "lg" }: ScoreCirc
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={cn("font-bold text-zinc-100", textSizeMap[size])}>{score}%</span>
-        <span className="text-xs text-zinc-500">{label}</span>
+        <span className={cn("font-bold text-foreground", textSizeMap[size])}>{score}%</span>
+        <span className="text-xs text-muted">{label}</span>
       </div>
     </div>
   );

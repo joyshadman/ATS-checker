@@ -11,7 +11,7 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const variantStyles: Record<Variant, string> = {
   primary:
-    "bg-gradient-primary text-white hover:brightness-110 shadow-sm hover:shadow-md active:scale-[0.97] active:brightness-95",
+    "bg-gradient-primary text-cream hover:brightness-110 shadow-sm hover:shadow-md active:scale-[0.97] active:brightness-95",
   secondary:
     "bg-card border text-foreground hover:bg-card-hover hover:border-border/80 active:scale-[0.97] shadow-sm",
   ghost:
@@ -45,7 +45,7 @@ export const Button = forwardRef<HTMLButtonElement, Props>(
       <button
         ref={ref}
         disabled={disabled || loading}
-        className={`inline-flex items-center justify-center font-medium transition-all duration-150 focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 disabled:opacity-40 disabled:pointer-events-none select-none ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+        className={`inline-flex items-center justify-center font-medium transition-all duration-150 focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:focus-visible:ring-offset-background disabled:opacity-40 disabled:pointer-events-none select-none ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
         {...props}
       >
         {loading && (

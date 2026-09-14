@@ -120,6 +120,7 @@ Non-retryable errors (401, 403, credit exhausted, etc.) halt immediately and do 
 - Prisma 6 uses standard `url` in datasource (Prisma 7+ changed this)
 - The `callAI` generic expects the return type — always type the response
 - CSS uses `@import "tailwindcss" (Tailwind v4) — no `@tailwind` directives
+- **Theming:** Amber Walnut Morning — all color tokens live as CSS custom properties in `app/globals.css` and are exposed via `@theme inline` (e.g. `bg-surface`, `text-accent`, `text-danger`, `border-border`). Dark mode is a `.dark` class variant (walnut night) toggled by `ThemeToggle`. Never hardcode raw Tailwind colors (zinc/indigo/emerald/rose) — always use theme tokens. Full reference: `context/ui-theme.md`.
 - The `getServerBaseURL()` / `getClientBaseURL()` in `lib/auth/url.ts` auto-detect the deployment URL:
   - Priority: `BETTER_AUTH_URL` > `VERCEL_URL` > `http://localhost:3000`
   - Client-side uses `window.location.origin` when available (no build-time inlining issues)

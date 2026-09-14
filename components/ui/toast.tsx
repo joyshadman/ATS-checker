@@ -50,12 +50,12 @@ const icons: Record<Toast["type"], ReactNode> = {
 
 const styles: Record<Toast["type"], string> = {
   success:
-    "bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300",
+    "bg-success/10 border-success/25 text-success",
   error:
-    "bg-rose-50 dark:bg-rose-950/60 border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-300",
-  info: "bg-sky-50 dark:bg-sky-950/60 border-sky-200 dark:border-sky-800/60 text-sky-700 dark:text-sky-300",
+    "bg-danger/10 border-danger/25 text-danger",
+  info: "bg-accent/10 border-accent/25 text-accent",
   warning:
-    "bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800/60 text-amber-700 dark:text-amber-300",
+    "bg-warning/10 border-warning/25 text-warning",
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {

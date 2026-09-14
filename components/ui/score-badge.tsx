@@ -11,9 +11,9 @@ export function ScoreBadge({ score, label, size = "sm" }: ScoreBadgeProps) {
   const displayLabel = label || scoreToVariantLabel(variant);
 
   const colorMap = {
-    success: "border-green-500/20 bg-green-500/10 text-green-400",
-    warning: "border-amber-500/20 bg-amber-500/10 text-amber-400",
-    danger: "border-red-500/20 bg-red-500/10 text-red-400",
+    success: "border-success/20 bg-success/10 text-success",
+    warning: "border-warning/20 bg-warning/10 text-warning",
+    danger: "border-danger/20 bg-danger/10 text-danger",
   };
 
   const sizeMap = {

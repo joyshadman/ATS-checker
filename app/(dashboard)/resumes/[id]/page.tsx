@@ -196,7 +196,7 @@ export default async function ResumePage({
                     key={i}
                     className="flex items-start gap-2.5 text-sm text-foreground"
                   >
-                    <svg className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <svg className="w-4 h-4 text-success mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                       <path d="M5 13l4 4L19 7" />
                     </svg>
                     {s}
@@ -243,7 +243,7 @@ export default async function ResumePage({
                   key={i}
                   className="flex items-start gap-2.5 text-sm text-foreground"
                 >
-                  <span className="w-5 h-5 rounded-full bg-gradient-primary flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">
+                  <span className="w-5 h-5 rounded-full bg-gradient-primary flex items-center justify-center text-cream text-xs font-bold shrink-0 mt-0.5">
                     {i + 1}
                   </span>
                   {r}

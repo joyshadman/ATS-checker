@@ -13,13 +13,13 @@ export function JobDescriptionInput({
 }: JobDescriptionInputProps) {
   return (
     <div className="space-y-3">
-      <label className="text-sm font-medium text-zinc-300">Job Description (Optional)</label>
+      <label className="text-sm font-medium text-foreground">Job Description (Optional)</label>
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={6}
-        className="w-full rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 text-sm text-zinc-200 placeholder-zinc-600 outline-none transition-colors focus:border-zinc-600"
+        className="w-full rounded-xl border border-border bg-surface/40 p-4 text-sm text-foreground placeholder:text-muted/60 outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/20"
       />
     </div>
   );

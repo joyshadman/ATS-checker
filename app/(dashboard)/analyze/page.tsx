@@ -175,7 +175,7 @@ export default function AnalyzePage() {
 
               {analysis.strengths.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-2">
+                  <h3 className="text-sm font-semibold text-success mb-2">
                     Strengths
                   </h3>
                   <ul className="space-y-1.5">
@@ -184,7 +184,7 @@ export default function AnalyzePage() {
                         key={i}
                         className="flex items-start gap-2 text-sm text-foreground"
                       >
-                        <svg className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <svg className="w-4 h-4 text-success mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                           <path d="M5 13l4 4L19 7" />
                         </svg>
                         {s}
@@ -196,7 +196,7 @@ export default function AnalyzePage() {
 
               {analysis.weaknesses.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-rose-600 dark:text-rose-400 mb-2">
+                  <h3 className="text-sm font-semibold text-danger mb-2">
                     Weaknesses
                   </h3>
                   <ul className="space-y-1.5">
@@ -205,7 +205,7 @@ export default function AnalyzePage() {
                         key={i}
                         className="flex items-start gap-2 text-sm text-foreground"
                       >
-                        <svg className="w-4 h-4 text-rose-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <svg className="w-4 h-4 text-danger mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                           <path d="M6 18L18 6M6 6l12 12" />
                         </svg>
                         {w}
@@ -289,7 +289,7 @@ export default function AnalyzePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {match.matchingSkills.length > 0 && (
                 <div className="rounded-xl bg-surface/60 border border-border/60 p-4">
-                  <h3 className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-2">
+                  <h3 className="text-sm font-semibold text-success mb-2">
                     Matching Skills
                   </h3>
                   <div className="flex flex-wrap gap-1.5">
@@ -304,7 +304,7 @@ export default function AnalyzePage() {
 
               {match.missingSkills.length > 0 && (
                 <div className="rounded-xl bg-surface/60 border border-border/60 p-4">
-                  <h3 className="text-sm font-semibold text-rose-600 dark:text-rose-400 mb-2">
+                  <h3 className="text-sm font-semibold text-danger mb-2">
                     Missing Skills
                   </h3>
                   <div className="flex flex-wrap gap-1.5">

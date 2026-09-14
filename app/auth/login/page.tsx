@@ -83,7 +83,7 @@ export default async function LoginPage(props: {
           </div>
 
           {errorMessage && (
-            <div className="rounded-xl border border-rose-200 dark:border-rose-800/60 bg-rose-50 dark:bg-rose-950/60 px-4 py-3 text-sm text-rose-700 dark:text-rose-300 animate-slide-down">
+            <div className="rounded-xl border border-danger/25 bg-danger/10 px-4 py-3 text-sm text-danger animate-slide-down">
               {errorMessage}
             </div>
           )}
@@ -107,13 +107,13 @@ export default async function LoginPage(props: {
               </p>
             </div>
           ) : (
-            <div className="rounded-xl border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/60 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+            <div className="rounded-xl border border-warning/25 bg-warning/10 px-4 py-3 text-sm text-warning">
               Google OAuth is not configured. Set{" "}
-              <code className="font-mono text-xs bg-amber-100 dark:bg-amber-900/50 px-1.5 py-0.5 rounded-md">
+              <code className="font-mono text-xs bg-warning/15 px-1.5 py-0.5 rounded-md">
                 GOOGLE_CLIENT_ID
               </code>{" "}
               and{" "}
-              <code className="font-mono text-xs bg-amber-100 dark:bg-amber-900/50 px-1.5 py-0.5 rounded-md">
+              <code className="font-mono text-xs bg-warning/15 px-1.5 py-0.5 rounded-md">
                 GOOGLE_CLIENT_SECRET
               </code>{" "}
               in your environment variables to enable sign-in.

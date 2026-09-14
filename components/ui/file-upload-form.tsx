@@ -21,7 +21,7 @@ export function FileUploadForm({
   accept,
   label,
   description,
-  accentColor = "bg-zinc-100",
+  accentColor = "text-accent",
   emptyStateMessage,
   emptyStateHint,
 }: FileUploadFormProps) {
@@ -69,8 +69,8 @@ export function FileUploadForm({
       <div
         className={`relative rounded-2xl border-2 border-dashed p-12 text-center transition-all duration-200 ${
           isDragging
-            ? "border-zinc-400 bg-zinc-800/50"
-            : "border-zinc-700 hover:border-zinc-600 hover:bg-zinc-800/20"
+            ? "border-accent bg-accent/5"
+            : "border-border hover:border-accent/50 hover:bg-surface/40"
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -84,12 +84,12 @@ export function FileUploadForm({
           className="hidden"
         />
         <div className="flex flex-col items-center gap-4">
-          <div className={`flex h-16 w-16 items-center justify-center rounded-2xl ${accentColor}/10`}>
-            <Upload className="h-8 w-8 text-zinc-400" />
+          <div className={`flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/10 ${accentColor}`}>
+            <Upload className="h-8 w-8" />
           </div>
           <div>
-            <p className="text-lg font-semibold text-zinc-100">{label}</p>
-            <p className="mt-1 text-sm text-zinc-500">{description}</p>
+            <p className="text-lg font-semibold text-foreground">{label}</p>
+            <p className="mt-1 text-sm text-muted">{description}</p>
           </div>
           <Button
             size="lg"
@@ -102,10 +102,10 @@ export function FileUploadForm({
       </div>
 
       {emptyStateMessage && (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900/50 py-16">
-          <FileText className="mb-4 h-12 w-12 text-zinc-700" />
-          <p className="text-lg font-medium text-zinc-500">{emptyStateMessage}</p>
-          {emptyStateHint && <p className="mt-1 text-sm text-zinc-600">{emptyStateHint}</p>}
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-border bg-surface/50 py-16">
+          <FileText className="mb-4 h-12 w-12 text-muted" />
+          <p className="text-lg font-medium text-foreground/70">{emptyStateMessage}</p>
+          {emptyStateHint && <p className="mt-1 text-sm text-muted/80">{emptyStateHint}</p>}
         </div>
       )}
     </div>

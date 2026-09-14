@@ -88,7 +88,7 @@ export default function InterviewPage() {
             <Card key={i}>
               <CardContent className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <span className="w-7 h-7 rounded-lg bg-gradient-primary flex items-center justify-center text-white text-xs font-bold">
+                  <span className="w-7 h-7 rounded-lg bg-gradient-primary flex items-center justify-center text-cream text-xs font-bold">
                     {i + 1}
                   </span>
                   <Badge variant={typeVariants[q.type] ?? "default"}>
@@ -124,7 +124,7 @@ export default function InterviewPage() {
 
                     {q.tips.length > 0 && (
                       <div>
-                        <span className="font-medium text-emerald-600 dark:text-emerald-400 text-xs uppercase tracking-wider">
+                        <span className="font-medium text-success text-xs uppercase tracking-wider">
                           Tips
                         </span>
                         <ul className="mt-1.5 space-y-1">
@@ -133,7 +133,7 @@ export default function InterviewPage() {
                               key={j}
                               className="flex items-start gap-2 text-muted"
                             >
-                              <svg className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <svg className="w-3.5 h-3.5 text-success mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M5 13l4 4L19 7" />
                               </svg>
                               {t}
@@ -145,7 +145,7 @@ export default function InterviewPage() {
 
                     {q.commonMistakes.length > 0 && (
                       <div>
-                        <span className="font-medium text-rose-600 dark:text-rose-400 text-xs uppercase tracking-wider">
+                        <span className="font-medium text-danger text-xs uppercase tracking-wider">
                           Common Mistakes
                         </span>
                         <ul className="mt-1.5 space-y-1">
@@ -154,7 +154,7 @@ export default function InterviewPage() {
                               key={j}
                               className="flex items-start gap-2 text-muted"
                             >
-                              <svg className="w-3.5 h-3.5 text-rose-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <svg className="w-3.5 h-3.5 text-danger mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M6 18L18 6M6 6l12 12" />
                               </svg>
                               {m}

@@ -122,7 +122,7 @@ export function Sidebar({ email }: Props) {
             className="flex items-center gap-3 group"
             onClick={() => setOpen(false)}
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-primary flex items-center justify-center text-white text-sm font-bold shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
+            <div className="w-9 h-9 rounded-xl bg-gradient-primary flex items-center justify-center text-cream text-sm font-bold shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
               A
             </div>
             <div>
@@ -146,7 +146,7 @@ export function Sidebar({ email }: Props) {
                 href={link.href}
                 className={`relative flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-150 ${
                   active
-                    ? "bg-gradient-primary text-white shadow-md"
+                    ? "bg-gradient-primary text-cream shadow-md"
                     : "text-muted hover:text-foreground hover:bg-surface"
                 }`}
                 onClick={() => setOpen(false)}
@@ -161,8 +161,8 @@ export function Sidebar({ email }: Props) {
         {/* User footer */}
         <div className="border-t border-border/60 p-3 space-y-2">
           <div className="px-3.5 py-2 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-primary/10 flex items-center justify-center shrink-0">
-              <span className="text-xs font-semibold text-foreground">
+            <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
+              <span className="text-xs font-semibold text-accent">
                 {email.charAt(0).toUpperCase()}
               </span>
             </div>
@@ -172,7 +172,7 @@ export function Sidebar({ email }: Props) {
           </div>
           <button
             onClick={handleSignOut}
-            className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all duration-150"
+            className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-muted hover:text-danger hover:bg-danger/10 transition-all duration-150"
           >
             <svg
               className="w-[18px] h-[18px] shrink-0"

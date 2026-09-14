@@ -12,41 +12,54 @@
   --color-card: var(--card);
   --color-card-hover: var(--card-hover);
   --color-surface: var(--surface);
+  --color-surface-secondary: var(--surface-secondary);
   --color-accent: var(--accent);
   --color-accent-fg: var(--accent-fg);
+  --color-walnut: var(--walnut);
+  --color-cream: var(--cream);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
 }
 
+/* ─── Light Theme: Amber Walnut Morning ─── */
+
 :root {
-  --background: #fafbfe;
-  --foreground: #0f172a;
-  --border: #e8ecf1;
-  --muted: #64748b;
-  --card: #ffffff;
-  --card-hover: #f8faff;
-  --surface: #f1f5f9;
-  --accent: #6366f1;
-  --accent-fg: #ffffff;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #f43f5e;
+  --background: #F7F1E7;
+  --foreground: #34251D;
+  --border: #DCCDB8;
+  --muted: #766456;
+  --card: #FFF9EF;
+  --card-hover: #F7EFE0;
+  --surface: #EFE3D0;
+  --surface-secondary: #E8D8C0;
+  --accent: #B7791F;
+  --accent-fg: #FFF9EF;
+  --walnut: #2E211A;
+  --cream: #FFF9EF;
+  --success: #667A45;
+  --warning: #B7791F;
+  --danger: #A64B3C;
 }
 
+/* ─── Dark Theme: Walnut Night ─── */
+
 .dark {
-  --background: #09090b;
-  --foreground: #fafafa;
-  --border: #27272a;
-  --muted: #a1a1aa;
-  --card: #18181b;
-  --card-hover: #1e1e22;
-  --surface: #141416;
-  --accent: #818cf8;
-  --accent-fg: #09090b;
-  --success: #34d399;
-  --warning: #fbbf24;
-  --danger: #fb7185;
+  --background: #1C1410;
+  --foreground: #F2E9DA;
+  --border: #3B2C21;
+  --muted: #B3A18E;
+  --card: #282019;
+  --card-hover: #2F261D;
+  --surface: #231B14;
+  --surface-secondary: #33281F;
+  --accent: #D49A3A;
+  --accent-fg: #2E211A;
+  --walnut: #2E211A;
+  --cream: #F2E9DA;
+  --success: #93A86C;
+  --warning: #D3A144;
+  --danger: #CE7A63;
 }
 
 * {
@@ -78,7 +91,7 @@ body {
   }
 
   ::selection {
-    background: color-mix(in srgb, var(--accent) 25%, transparent);
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
   }
 }
 
@@ -133,45 +146,45 @@ body {
 @layer utilities {
   /* ─── Gradients ─── */
   .bg-gradient-primary {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    background: linear-gradient(135deg, #4A2F20, #6E4B33);
   }
   .bg-gradient-accent {
-    background: linear-gradient(135deg, #06b6d4, #0ea5e9);
+    background: linear-gradient(135deg, #8F6215, #B7791F);
   }
   .bg-gradient-success {
-    background: linear-gradient(135deg, #10b981, #34d399);
+    background: linear-gradient(135deg, #667A45, #7C9251);
   }
   .bg-gradient-warning {
-    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    background: linear-gradient(135deg, #8F6215, #B97E22);
   }
   .bg-gradient-error {
-    background: linear-gradient(135deg, #f43f5e, #fb7185);
+    background: linear-gradient(135deg, #A64B3C, #C0604E);
   }
   .bg-gradient-card {
-    background: linear-gradient(135deg, #6366f106, #8b5cf606);
+    background: linear-gradient(135deg, #B7791F08, #D49A3A08);
   }
   .bg-gradient-hero {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6, #06b6d4);
+    background: linear-gradient(135deg, #2E211A, #4A2F20, #6E4B33);
   }
   .bg-gradient-mesh {
     background:
-      radial-gradient(at 20% 20%, #6366f112 0%, transparent 50%),
-      radial-gradient(at 80% 80%, #8b5cf612 0%, transparent 50%),
-      radial-gradient(at 50% 50%, #06b6d408 0%, transparent 50%);
+      radial-gradient(at 20% 20%, #D49A3A12 0%, transparent 50%),
+      radial-gradient(at 80% 80%, #B7791F0C 0%, transparent 50%),
+      radial-gradient(at 50% 50%, #6E4B330A 0%, transparent 50%);
   }
   .bg-gradient-glow {
-    background: radial-gradient(circle at 50% 0%, #6366f118, transparent 60%);
+    background: radial-gradient(circle at 50% 0%, #D49A3A16, transparent 60%);
   }
 
   /* ─── Text ─── */
   .text-gradient {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    background: linear-gradient(135deg, #B7791F, #D49A3A);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
   .text-gradient-accent {
-    background: linear-gradient(135deg, #06b6d4, #0ea5e9);
+    background: linear-gradient(135deg, #4A2F20, #8A5B28);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -179,37 +192,22 @@ body {
 
   /* ─── Shadows ─── */
   .shadow-card {
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.03), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+    box-shadow: 0 1px 3px 0 rgb(74 47 32 / 0.04), 0 1px 2px -1px rgb(74 47 32 / 0.05);
   }
   .shadow-card-hover {
-    box-shadow: 0 8px 25px -5px rgb(0 0 0 / 0.08), 0 4px 10px -4px rgb(0 0 0 / 0.04);
+    box-shadow: 0 8px 25px -5px rgb(74 47 32 / 0.10), 0 4px 10px -4px rgb(74 47 32 / 0.06);
   }
   .shadow-float {
-    box-shadow: 0 20px 40px -8px rgb(0 0 0 / 0.1), 0 8px 16px -4px rgb(0 0 0 / 0.04);
+    box-shadow: 0 20px 40px -8px rgb(74 47 32 / 0.14), 0 8px 16px -4px rgb(74 47 32 / 0.06);
   }
   .shadow-glow {
-    box-shadow: 0 0 40px -8px rgb(99 102 241 / 0.2);
+    box-shadow: 0 0 40px -8px rgb(183 121 31 / 0.22);
   }
   .shadow-glow-lg {
-    box-shadow: 0 0 80px -12px rgb(99 102 241 / 0.25);
+    box-shadow: 0 0 80px -12px rgb(183 121 31 / 0.28);
   }
   .shadow-inner-soft {
-    box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.03);
-  }
-
-  /* ─── Glass ─── */
-  .glass {
-    background: color-mix(in srgb, var(--card) 70%, transparent);
-    backdrop-filter: blur(16px) saturate(1.8);
-    -webkit-backdrop-filter: blur(16px) saturate(1.8);
-  }
-  .glass-strong {
-    background: color-mix(in srgb, var(--card) 85%, transparent);
-    backdrop-filter: blur(24px) saturate(2);
-    -webkit-backdrop-filter: blur(24px) saturate(2);
-  }
-  .glass-border {
-    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    box-shadow: inset 0 2px 4px 0 rgb(74 47 32 / 0.04);
   }
 
   /* ─── Animations ─── */
@@ -250,18 +248,4 @@ body {
   .stagger-4 { animation-delay: 200ms; }
   .stagger-5 { animation-delay: 250ms; }
   .stagger-6 { animation-delay: 300ms; }
-
-  /* ─── Misc ─── */
-  .bg-noise {
-    position: relative;
-  }
-  .bg-noise::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    opacity: 0.015;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    pointer-events: none;
-    border-radius: inherit;
-  }
 }
