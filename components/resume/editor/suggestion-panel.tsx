@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Link from "next/link";
 import { useFormContext } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { mergeSkillSuggestions, type ResumeForm } from "@/lib/resume/form";
+import { AI_LIMIT_REACHED, PRICING_PATH } from "@/lib/ai/credits-shared";
 import { splitPlaceholders } from "@/lib/resume/placeholders";
 import type { AiStyle, SectionTarget } from "@/lib/resume/section-writing";
 import { useAiWriting, type ActiveAi } from "./ai-writing";
@@ -120,7 +122,7 @@ function Suggested({ active }: { active: ActiveAi }) {
 
 /** Inline AI suggestion for one target; renders only while that target is active. */
 export function SuggestionPanel({ aiKey, buildTarget }: { aiKey: string; buildTarget: () => SectionTarget }) {
-  const { active, busy, cooldownLeft, request, accept, discard } = useAiWriting();
+  const { active, busy, outOfUses, cooldownLeft, request, accept, discard } = useAiWriting();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const mine = active?.key === aiKey ? active : null;
   const status = mine?.status;
@@ -132,12 +134,14 @@ export function SuggestionPanel({ aiKey, buildTarget }: { aiKey: string; buildTa
 
   if (!mine) return null;
 
-  const waiting = busy || cooldownLeft > 0;
+  const waiting = busy || cooldownLeft > 0 || outOfUses;
+  // The server blocked the request: no AI uses left (spec 0004), so retrying cannot help.
+  const limited = mine.status === "error" && mine.error === AI_LIMIT_REACHED;
   const retryLabel = cooldownLeft > 0 ? `Try again in ${cooldownLeft}s` : "Try again";
   const loading = mine.status === "loading";
   // On a retry the pressed control stays rendered (unavailable) so keyboard focus is not lost.
   const showControls = !loading || mine.retry;
-  const showChips = mine.snapshot.kind !== "skills" && snapshotHasText(mine.snapshot) && showControls;
+  const showChips = mine.snapshot.kind !== "skills" && snapshotHasText(mine.snapshot) && showControls && !limited;
   const headingId = `${aiKey.replace(/[^a-zA-Z0-9_-]/g, "-")}-ai-heading`;
 
   const retry = (style?: AiStyle) => {
@@ -171,6 +175,14 @@ export function SuggestionPanel({ aiKey, buildTarget }: { aiKey: string; buildTa
       {mine.status === "error" && (
         <p role="alert" className="text-sm text-danger">
           {mine.error}
+          {limited && (
+            <>
+              {" "}
+              <Link href={PRICING_PATH} prefetch={false} className="font-semibold underline underline-offset-2">
+                See pricing
+              </Link>
+            </>
+          )}
         </p>
       )}
 
@@ -225,16 +237,18 @@ export function SuggestionPanel({ aiKey, buildTarget }: { aiKey: string; buildTa
               Accept
             </Button>
           )}
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            aria-disabled={waiting}
-            className={waiting ? "opacity-50 cursor-not-allowed" : ""}
-            onClick={() => retry(mine.style)}
-          >
-            {retryLabel}
-          </Button>
+          {!limited && (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              aria-disabled={waiting}
+              className={waiting ? "opacity-50 cursor-not-allowed" : ""}
+              onClick={() => retry(mine.style)}
+            >
+              {retryLabel}
+            </Button>
+          )}
           {!loading && (
             <Button type="button" size="sm" variant="ghost" onClick={discard}>
               Discard

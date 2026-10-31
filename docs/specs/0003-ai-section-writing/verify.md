@@ -20,6 +20,10 @@ _Steps derived from spec 0003 acceptance criteria. `/check verify` runs these; `
 - [ ] Open a bullets suggestion, move the entry up, Accept → the moved entry gets the bullets → AC-10
 - [ ] Open a bullets suggestion, remove that entry → panel closes, focus goes to the section heading, nothing changes → AC-10
 - [ ] German summary and bullets → German suggestions → AC-11
+- [ ] Empty education entry → hint "Add a school first."; type a school → available. Empty project entry → hint "Add a project name first."; add only a bullet → available. Remove every experience entry while a project with text remains → Suggest skills stays available → AC-6
+- [ ] Focus an unavailable AI button and press Enter (or click it) → no request in the network tab, no panel opens, focus stays on the button, the hint is read through `aria-describedby` → AC-6
+- [ ] With a summary filled, intercept the `writeResumeSection` request and blank both `target.text` and `context` → the panel shows "Add some details first", the summary is unchanged → AC-6
+- [ ] At 375px, an experience entry with bullets and an empty entry showing its AI hint → page width stays 375, no sideways scroll, bullet controls stay inside the card → AC-6
 - [ ] Accept text with placeholders and Save → warning "N placeholders still to fill" (N matches the saved placeholders); dismiss it; fill them and Save → warning gone; a failed save leaves it as it was → AC-12
 - [ ] Phone width (375px) → "Yours" and "Suggested" stack, no horizontal scroll; Tab reaches Accept, Try again, Discard; after Accept or Discard, focus returns to the AI button → AC-1, AC-2, AC-3, AC-7
 
@@ -43,4 +47,4 @@ _Steps derived from spec 0003 acceptance criteria. `/check verify` runs these; `
 - [ ] Placeholder warning N is counted from the saved content, not the form
 
 ## Acceptance-criteria coverage
-- AC-1 UI 1, 2, phone check · AC-2 UI 3, 4 · AC-3 UI 5 · AC-4 UI 6, 7 · AC-5 UI 8 · AC-6 UI 9 · AC-7 UI 10, 11 · AC-8 UI 12, 13 · AC-9 UI 14, 15 · AC-10 UI 13, 16, 17 · AC-11 UI 18 · AC-12 UI 19 · AC-13 Commands 1 to 3 · AC-14 Commands 4
+- AC-1 UI 1, 2, phone check · AC-2 UI 3, 4 · AC-3 UI 5 · AC-4 UI 6, 7 · AC-5 UI 8 · AC-6 UI 9, 19 to 22 · AC-7 UI 10, 11 · AC-8 UI 12, 13 · AC-9 UI 14, 15 · AC-10 UI 13, 16, 17 · AC-11 UI 18 · AC-12 UI 23 · AC-13 Commands 1 to 3 · AC-14 Commands 4

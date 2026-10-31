@@ -1,3 +1,5 @@
+import type { AiBalanceView } from "@/lib/ai/credits-shared";
+
 export type SectionScores = {
   format: number;
   keywords: number;
@@ -89,6 +91,22 @@ export type SectionWritingAIResponse = {
   skills?: unknown;
 };
 
+/**
+ * Raw AI answer for resume import (spec 0006). Every field is unknown on purpose:
+ * cleanImportedResume reads it leniently and never trusts its shape.
+ */
+export type ResumeImportAIResponse = {
+  contact?: unknown;
+  summary?: unknown;
+  experience?: unknown;
+  education?: unknown;
+  skills?: unknown;
+  projects?: unknown;
+  certifications?: unknown;
+  languages?: unknown;
+  unplaced?: unknown;
+};
+
 export type SkillAddition = { category: string; items: string[] };
 
 /** Cleaned section writing suggestion returned to the editor (spec 0003). */
@@ -96,6 +114,12 @@ export type SectionSuggestion =
   | { kind: "summary"; summary: string; unchanged: boolean }
   | { kind: "bullets"; entryId: string; bullets: string[]; unchanged: boolean }
   | { kind: "skills"; additions: SkillAddition[] };
+
+/** writeResumeSection result: the suggestion plus the AI balance after its charge (spec 0004). */
+export type SectionWritingResult = {
+  suggestion: SectionSuggestion;
+  balance: AiBalanceView;
+};
 
 export type ActionResult<T> =
   | { success: true; data: T }

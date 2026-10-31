@@ -1,6 +1,7 @@
 "use server";
 
 import { callAI } from "@/lib/ai/client";
+import { refundAiUse, reserveAiUse } from "@/lib/ai/credits";
 import { withAction, loadResumeWithAuth } from "@/lib/action-helpers";
 import { zodIssueMessage } from "@/lib/resume/content";
 import {
@@ -10,16 +11,22 @@ import {
   NOTHING_TO_WRITE,
   sectionWritingInputSchema,
   targetKeyOf,
+  type SectionTarget,
 } from "@/lib/resume/section-writing";
 import { buildSectionWritingPrompt, SECTION_WRITING_SYSTEM_PROMPT } from "@/lib/prompts/section-writing";
-import type { ActionResult, SectionSuggestion, SectionWritingAIResponse } from "@/types";
+import type { ActionResult, SectionWritingAIResponse, SectionWritingResult } from "@/types";
+
+const PURPOSE = { summary: "SUMMARY", bullets: "BULLETS", skills: "SKILLS" } as const satisfies Record<
+  SectionTarget["kind"],
+  string
+>;
 
 /**
  * Writes or rewrites one editor target with AI (spec 0003). Reads the user's unsaved
- * text from the input, never writes to the database. The single entry point feature 4
- * will count and gate.
+ * text from the input, never writes resume content. Each usable answer costs one AI use
+ * (spec 0004): reserved after every free check, refunded when the AI step fails.
  */
-export async function writeResumeSection(input: unknown): Promise<ActionResult<SectionSuggestion>> {
+export async function writeResumeSection(input: unknown): Promise<ActionResult<SectionWritingResult>> {
   return withAction(
     async (userId) => {
       const parsed = sectionWritingInputSchema.safeParse(input);
@@ -31,6 +38,8 @@ export async function writeResumeSection(input: unknown): Promise<ActionResult<S
 
       if (!hasSomethingToWrite(target, context)) throw new Error(NOTHING_TO_WRITE);
 
+      const { ledgerId, balance } = await reserveAiUse(userId, PURPOSE[target.kind], resumeId);
+
       // The nonce is in the prompt and the dedup key, so neither cache replays an
       // earlier answer (5 min prompt cache, 30 s dedup cache incl. failures).
       const aiResult = await callAI<SectionWritingAIResponse>(
@@ -39,9 +48,17 @@ export async function writeResumeSection(input: unknown): Promise<ActionResult<S
         `write:${userId}:${resumeId}:${targetKeyOf(target)}:${nonce}`
       );
 
-      if (!aiResult.success) throw new Error(aiResult.error);
+      if (!aiResult.success) {
+        await refundAiUse(userId, ledgerId);
+        throw new Error(aiResult.error);
+      }
 
-      return cleanSectionSuggestion(target, aiResult.data);
+      try {
+        return { suggestion: cleanSectionSuggestion(target, aiResult.data), balance };
+      } catch (error) {
+        await refundAiUse(userId, ledgerId);
+        throw error;
+      }
     },
     { cooldown: true, cooldownKey: "ai-write", cooldownMs: AI_COOLDOWN_MS }
   );

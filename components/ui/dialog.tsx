@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   title: string;
   description?: string;
+  /** false hides the header close button (for a step that must not be left). */
+  closable?: boolean;
   children: ReactNode;
 };
 
@@ -15,6 +18,7 @@ export function Dialog({
   onClose,
   title,
   description,
+  closable = true,
   children,
 }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -75,9 +79,11 @@ export function Dialog({
     };
   }, [open]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  // Portaled to <body>: a transformed ancestor (e.g. an animate-slide-up wrapper) would
+  // otherwise trap `fixed` and draw the dialog inside that section instead of the screen.
+  return createPortal(
     <div
       ref={overlayRef}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -88,7 +94,8 @@ export function Dialog({
       aria-modal="true"
       aria-labelledby="dialog-title"
     >
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm animate-fade-in" />
+      {/* The dim layer covers the overlay, so it is what receives backdrop clicks. */}
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm animate-fade-in" aria-hidden="true" onClick={onClose} />
       <div ref={panelRef} className="relative w-full max-w-md rounded-2xl border bg-card shadow-float p-6 space-y-4 animate-scale-in">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
@@ -102,6 +109,7 @@ export function Dialog({
               <p className="text-sm text-muted">{description}</p>
             )}
           </div>
+          {closable && (
           <button
             type="button"
             onClick={onClose}
@@ -120,9 +128,11 @@ export function Dialog({
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
           </button>
+          )}
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

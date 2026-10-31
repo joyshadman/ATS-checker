@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getAiBalanceForUser } from "@/actions/credits";
 import { getResumeContent } from "@/actions/resume";
 import {
   RESUME_NOT_FOUND,
@@ -10,8 +11,13 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle, FileText } from "@/components/ui/icons";
 import { ResumeEditor } from "@/components/resume/editor/resume-editor";
+import { ImportResumeButton } from "@/components/resume/import-resume-button";
 
 type Params = { params: Promise<{ id: string }> };
+
+// Server actions on this page (AI writing, import) may outlive the editor's 100 s watchdog, so a
+// reserved AI use is refunded or kept, never cut off in between (spec 0004).
+export const maxDuration = 120;
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
@@ -25,11 +31,13 @@ function Notice({
   icon,
   title,
   message,
+  action,
 }: {
   id: string;
   icon: React.ReactNode;
   title: string;
   message: string;
+  action?: React.ReactNode;
 }) {
   return (
     <div className="max-w-2xl mx-auto py-8 animate-slide-up">
@@ -42,12 +50,19 @@ function Notice({
             <h1 className="text-xl font-semibold text-foreground">{title}</h1>
             <p className="text-sm text-muted max-w-md">{message}</p>
           </div>
-          <Link
-            href={`/resumes/${id}`}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-primary px-4 py-2 text-sm font-medium text-cream shadow-sm hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          >
-            Back to resume
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            {action}
+            <Link
+              href={`/resumes/${id}`}
+              className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                action
+                  ? "border bg-card text-foreground hover:bg-card-hover"
+                  : "bg-gradient-primary text-cream shadow-sm hover:brightness-110"
+              }`}
+            >
+              Back to resume
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -56,7 +71,7 @@ function Notice({
 
 export default async function EditResumePage({ params }: Params) {
   const { id } = await params;
-  const result = await getResumeContent(id);
+  const [result, balance] = await Promise.all([getResumeContent(id), getAiBalanceForUser()]);
 
   if (!result.success) {
     if (result.error === RESUME_NOT_FOUND || result.error === RESUME_UNAUTHORIZED) notFound();
@@ -74,7 +89,9 @@ export default async function EditResumePage({ params }: Params) {
     );
   }
 
-  const { title, content, contentUpdatedAt, hasDraft } = result.data;
+  const { title, content, contentUpdatedAt, hasDraft, importNotice, importedFrom, latestImport, hasUploadText } =
+    result.data;
+  const initialBalance = balance.success ? balance.data : null;
 
   if (!content || !contentUpdatedAt) {
     return (
@@ -82,7 +99,15 @@ export default async function EditResumePage({ params }: Params) {
         id={id}
         icon={<FileText className="h-7 w-7 text-accent" aria-hidden="true" />}
         title={title}
-        message="This resume was uploaded as a file. Opening it in the editor comes with import."
+        message="Open this upload in the editor. The AI splits it into sections you can edit."
+        action={
+          <ImportResumeButton
+            resumeId={id}
+            hasText={hasUploadText}
+            balance={initialBalance}
+            latestImport={latestImport}
+          />
+        }
       />
     );
   }
@@ -95,6 +120,9 @@ export default async function EditResumePage({ params }: Params) {
       initialContent={content}
       initialUpdatedAt={contentUpdatedAt.toISOString()}
       initialHasDraft={hasDraft}
+      initialBalance={initialBalance}
+      initialImportNotice={importNotice}
+      importedFrom={importedFrom}
     />
   );
 }

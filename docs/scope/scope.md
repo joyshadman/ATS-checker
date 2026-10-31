@@ -21,10 +21,11 @@ _These are recommendations to keep your build orderly, not requirements. Skip an
 | 1 | Structured resume data model | Foundation | in-progress |
 | 2 | Resume maker: manual section editor | Slice 1 | in-progress |
 | 3 | AI section writing | Slice 2 | in-progress |
-| 4 | AI usage limit & credit balance | Slice 3 | planned |
-| 5 | Pricing page (dummy) | Slice 3 | planned |
-| 6 | Import an existing resume into the editor | Slice 4 | planned |
+| 4 | AI usage limit & credit balance | Slice 3 | in-progress |
+| 5 | Pricing page (dummy) | Slice 3 | in-progress |
+| 6 | Import an existing resume into the editor | Slice 4 | in-progress |
 | 7 | PDF export | Slice 5 | planned |
+| 8 | Resume viewer & ATS templates | Slice 5 | in-progress |
 
 ## Already built
 
@@ -89,29 +90,62 @@ spec [0003](../specs/0003-ai-section-writing/index.md) · code in `actions/secti
   - [x] Summary end to end: server action with checks, cooldown, nonce, and cleaning; suggestion panel with Accept, Try again, chips, target role box (AC-1, AC-4, AC-5, AC-7, AC-8, AC-9, AC-10, AC-11, AC-13, AC-14)
   - [x] Bullets on every experience, education, and project entry, applied by entry id (AC-2, AC-10, AC-14)
   - [x] Skills suggestions that only add, with the merge and limits (AC-3, AC-14)
-  - [ ] Preconditions, placeholder warning after save, phone width and keyboard check (AC-6, AC-12)
+  - [ ] Preconditions, placeholder warning after save, phone width and keyboard check (AC-6, AC-12) · AC-6 and AC-12 built and checked in a browser, bullets fit at phone width; open AI panels at phone width and keyboard only (spec task 8) not yet checked
 - [ ] Verify it: `/check verify AI section writing`
 
 ## Slice 3: Limits and credits
 
-### 4. AI usage limit & credit balance · needs a decision
+### 4. AI usage limit & credit balance · in-progress
 Count AI resume writing uses per user (section writing and import; analysis, job match, interview, and cover letters stay free). The first 5 are free; after that each use needs a credit. Show the remaining balance in the maker.
 **Done when:** the 6th AI writing use with no credits is blocked on the server with a message linking to the pricing page; the balance updates after each use; free features are never blocked.
-- [ ] Design it (spec): `/architect AI usage limit & credit balance`
+spec [0004](../specs/0004-ai-usage-credit-balance/index.md) · code in `lib/ai/credits.ts`, `lib/ai/credits-shared.ts`, `actions/credits.ts`, `actions/section-writing.ts`, `components/resume/editor/`, `scripts/grant-credits.mjs`, `prisma/schema.prisma`
+- [x] Design it (spec): `/architect AI usage limit & credit balance`
+- [x] Build it: `/develop AI usage limit & credit balance`
+  - [x] Schema, free use reserve in `writeResumeSection`, and the balance line end to end (AC-1, AC-3, AC-4, AC-5, AC-7, AC-10, AC-11, AC-12)
+  - [x] Refunds on failed AI steps and credit spending (AC-1, AC-2, AC-5)
+  - [x] Low balance warning and the out of uses state on buttons and panel (AC-3, AC-8, AC-9)
+  - [x] Credit grant script (AC-5, AC-6)
+- [ ] Verify it: `/check verify AI usage limit & credit balance`
 
-### 5. Pricing page (dummy) · needs a decision
+### 5. Pricing page (dummy) · in-progress
 A pricing page in the same Amber Walnut style listing credit packs. For now Buy does not charge or add credits; it shows a "coming soon" message.
 **Done when:** the page is reachable from the sidebar and from the limit message, shows plans and prices in both light and dark mode, and Buy shows the coming soon notice without changing the balance.
-- [ ] Design it (spec): `/architect pricing page`
+spec [0005](../specs/0005-pricing-page/index.md) · code in `app/(dashboard)/pricing/`, `components/pricing/`, `lib/pricing/packs.ts`, `lib/ai/credits-shared.ts`, `components/ui/sidebar.tsx`, `components/ui/dialog.tsx`
+- [x] Design it (spec): `/architect pricing page`
+- [x] Build it: `/develop pricing page`
+  - [x] Route, sidebar entry, and pack cards from `CREDIT_PACKS`, so every "See pricing" link works (AC-1, AC-2, AC-3, AC-5)
+  - [x] Buy coming soon dialog (AC-6)
+  - [x] Balance card with the shared `balanceLabel`, the explainer, and the FAQ (AC-4, AC-7, AC-8)
+  - [x] Light, dark, phone, and desktop checks (AC-9)
+- [ ] Verify it: `/check verify pricing page`
 
 ## Slice 4: Editing existing resumes
 
-### 6. Import an existing resume into the editor · needs a decision
+### 6. Import an existing resume into the editor · in-progress
 Open an uploaded resume in the section editor: AI splits its text into sections (counts as one AI use), then the user edits and saves it like any other resume.
 **Done when:** from a resume's detail page the user can open it in the editor with sections filled from the uploaded text, edit, and save; the original upload stays intact.
-- [ ] Design it (spec): `/architect import resume into editor`
+spec [0006](../specs/0006-import-resume-into-editor/index.md) · code in `actions/resume-import.ts`, `lib/resume/import.ts`, `lib/prompts/resume-import.ts`, `lib/ai/client.ts`, `components/resume/import-resume-button.tsx`, `components/resume/editor/import-notice.tsx`, `prisma/schema.prisma`, `actions/resume.ts`, `app/(dashboard)/resumes/[id]/`, `components/resume/resume-list.tsx`, `components/resume/editor/resume-editor.tsx`, `components/ui/dialog.tsx`, `types/index.ts`
+- [x] Design it (spec): `/architect import resume into editor`
+- [x] Build it: `/develop import resume into editor`
+  - [x] Schema, `callAI` options, and the cleaner (AC-4, AC-5, AC-6, AC-7, AC-16)
+  - [x] `importResume` with charge and refund, plus the detail page button opening the editor end to end (AC-1, AC-2, AC-3, AC-10, AC-11, AC-12, AC-13)
+  - [x] Editor import notice and Dismiss (AC-8)
+  - [x] Import again, "Imported from" line, edit page and list entry points (AC-1, AC-9, AC-14, AC-15)
+- [ ] Verify it: `/check verify import resume into editor`
 
-## Slice 5: Export
+## Slice 5: View and export
+
+### 8. Resume viewer & ATS templates · in-progress
+Show every built or imported resume as real A4 pages instead of plain text (one page when it fits, page 2 when it does not, a warning past 2), and let the user pick from several ATS friendly templates. Uploads keep their text view with the "Open in editor" button.
+**Done when:** a built resume's page shows it laid out as a resume in the chosen template, the user can switch between at least two ATS friendly templates and the choice is remembered, and the text stays selectable and in section order.
+spec [0007](../specs/0007-resume-viewer-ats-templates/index.md)
+- [x] Design it (spec): `/architect resume viewer & ATS templates`
+- [ ] Build it: `/develop resume viewer & ATS templates`
+  - [ ] Columns, registry, and the Classic sheet on the detail page with the saved template picker (AC-1, AC-2, AC-3, AC-5, AC-6, AC-7, AC-9, AC-11, AC-12, AC-13, AC-14)
+  - [ ] Modern and Compact templates, plus the link style picker (AC-2, AC-4, AC-11)
+  - [ ] Draft as a second sheet, A4 pagination with the over two pages warning, and the edge states (AC-8, AC-10, AC-13 to AC-19)
+  - [ ] Light, dark, phone, and desktop checks against the A4 Figma frames (AC-1 to AC-19)
+- [ ] Verify it: `/check verify resume viewer & ATS templates`
 
 ### 7. PDF export · needs a decision
 Download a resume from the editor as a clean, single column, ATS friendly PDF.
@@ -121,8 +155,8 @@ Download a resume from the editor as a clean, single column, ATS friendly PDF.
 ## Deferred
 Out of scope for the current build pass, kept so the plan stays honest.
 - **Real payments**: Buy charges and adds credits to the balance · needs a decision · GA
-- **Multiple resume templates**: more than one PDF look · needs a decision
 - **Credit history**: a list of credits bought and used · needs a decision
+- **Live preview in the editor**: show the formatted sheet beside the editor as you type, with the template picker there too · needs a decision · from spec 0007
 
 ## Legend
 

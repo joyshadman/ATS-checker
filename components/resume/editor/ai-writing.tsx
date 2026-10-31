@@ -12,6 +12,7 @@ import {
 } from "react";
 import { useFormContext } from "react-hook-form";
 import { writeResumeSection } from "@/actions/section-writing";
+import { AI_LIMIT_REACHED, balanceTotal, type AiBalanceView } from "@/lib/ai/credits-shared";
 import { buildAiContext, mergeSkillSuggestions, type ResumeForm } from "@/lib/resume/form";
 import { AI_COOLDOWN_MS, targetKeyOf, type AiStyle, type SectionTarget } from "@/lib/resume/section-writing";
 import type { SectionSuggestion } from "@/types";
@@ -40,6 +41,10 @@ export type ActiveAi = {
 type AiWritingValue = {
   active: ActiveAi | null;
   busy: boolean;
+  /** AI uses left (spec 0004); null when it could not be loaded. */
+  balance: AiBalanceView | null;
+  /** No free uses and no credits left: AI buttons are unavailable. */
+  outOfUses: boolean;
   /** Whole seconds left before Try again or a chip may run again. */
   cooldownLeft: number;
   targetRole: string;
@@ -65,9 +70,18 @@ function focusLater(id: string, fallbackId?: string) {
   });
 }
 
-export function AiWritingProvider({ resumeId, children }: { resumeId: string; children: ReactNode }) {
+export function AiWritingProvider({
+  resumeId,
+  initialBalance,
+  children,
+}: {
+  resumeId: string;
+  initialBalance: AiBalanceView | null;
+  children: ReactNode;
+}) {
   const { getValues, setValue } = useFormContext<ResumeForm>();
   const [active, setActive] = useState<ActiveAi | null>(null);
+  const [balance, setBalance] = useState(initialBalance);
   const [busy, setBusy] = useState(false);
   const [targetRole, setTargetRole] = useState("");
   const [cooldownUntil, setCooldownUntil] = useState(0);
@@ -159,7 +173,12 @@ export function AiWritingProvider({ resumeId, children }: { resumeId: string; ch
         style,
         nonce: crypto.randomUUID(),
       })
-        .then((result) => finish(result.success ? { suggestion: result.data } : { error: result.error }))
+        .then((result) => {
+          // The balance moves even for a late or abandoned answer: the server charged it (spec 0004).
+          if (result.success) setBalance(result.data.balance);
+          else if (result.error === AI_LIMIT_REACHED) setBalance({ freeLeft: 0, credits: 0 });
+          finish(result.success ? { suggestion: result.data.suggestion } : { error: result.error });
+        })
         .catch(() => finish({ error: OFFLINE }));
     },
     [getValues, release, resumeId, targetRole]
@@ -217,10 +236,23 @@ export function AiWritingProvider({ resumeId, children }: { resumeId: string; ch
   );
 
   const cooldownLeft = Math.max(0, Math.ceil((cooldownUntil - now) / 1000));
+  const outOfUses = balance !== null && balanceTotal(balance) === 0;
 
   const value = useMemo<AiWritingValue>(
-    () => ({ active, busy, cooldownLeft, targetRole, setTargetRole, request, accept, discard, closeRemoved }),
-    [active, busy, cooldownLeft, targetRole, request, accept, discard, closeRemoved]
+    () => ({
+      active,
+      busy,
+      balance,
+      outOfUses,
+      cooldownLeft,
+      targetRole,
+      setTargetRole,
+      request,
+      accept,
+      discard,
+      closeRemoved,
+    }),
+    [active, busy, balance, outOfUses, cooldownLeft, targetRole, request, accept, discard, closeRemoved]
   );
 
   return <AiWritingContext.Provider value={value}>{children}</AiWritingContext.Provider>;

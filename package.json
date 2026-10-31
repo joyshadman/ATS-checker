@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "credits:grant": "node --env-file=.env scripts/grant-credits.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

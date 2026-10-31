@@ -20,6 +20,8 @@ model User {
   sessions     Session[]
   resumes      Resume[]
   coverLetters CoverLetter[]
+  aiBalance    AiBalance?
+  aiLedger     AiLedger[]
 }
 
 model Account {
@@ -78,9 +80,17 @@ model Resume {
   contentUpdatedAt DateTime?
   improvedContent  Json?
 
+  // Import (spec 0006): set only on built copies made from an upload.
+  importedFromId String?
+  importedFrom   Resume?  @relation("ResumeImport", fields: [importedFromId], references: [id], onDelete: SetNull)
+  importedCopies Resume[] @relation("ResumeImport")
+  importNotice   Json?
+
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   analyses   Analysis[]
   interviews Interview[]
+
+  @@index([importedFromId])
 }
 
 model CoverLetter {
@@ -131,4 +141,47 @@ model Interview {
   createdAt       DateTime @default(now())
 
   resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+}
+
+// AI usage limit and credits (spec 0004). Writes go through lib/ai/credits.ts only.
+
+enum AiLedgerKind {
+  FREE_USE
+  CREDIT_USE
+  GRANT
+  REFUND
+}
+
+enum AiPurpose {
+  SUMMARY
+  BULLETS
+  SKILLS
+  IMPORT
+}
+
+model AiBalance {
+  userId    String   @id
+  freeUsed  Int      @default(0)
+  credits   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AiLedger {
+  id         String       @id @default(cuid())
+  userId     String
+  kind       AiLedgerKind
+  amount     Int
+  purpose    AiPurpose?
+  // Plain text on purpose: deleting a resume never touches billing history.
+  resumeId   String?
+  refundOfId String?      @unique
+  note       String?
+  createdAt  DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }

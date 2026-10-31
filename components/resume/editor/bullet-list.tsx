@@ -81,7 +81,7 @@ export function BulletList({ section, index }: { section: BulletSection; index: 
   const buildTarget = () => buildAiTarget(getValues(), target);
 
   return (
-    <fieldset className="space-y-2">
+    <fieldset className="space-y-2 min-w-0">
       <legend className="float-left text-sm font-medium text-foreground mt-1.5">Bullets</legend>
       <div className="flex justify-end">
         <AiButton

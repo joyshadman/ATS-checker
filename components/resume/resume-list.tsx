@@ -164,15 +164,13 @@ export function ResumeList({ resumes: initial }: { resumes: Resume[] }) {
                   <Badge variant={scoreVariant}>
                     {r.atsScore != null ? `${r.atsScore}%` : "Pending"}
                   </Badge>
-                  {r.contentUpdatedAt && (
-                    <Link
-                      href={`/resumes/${r.id}/edit`}
-                      aria-label={`Edit ${r.title}`}
-                      className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-accent hover:bg-accent/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-                    >
-                      Edit
-                    </Link>
-                  )}
+                  <Link
+                    href={`/resumes/${r.id}/edit`}
+                    aria-label={r.contentUpdatedAt ? `Edit ${r.title}` : `Open ${r.title} in editor`}
+                    className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-accent hover:bg-accent/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 whitespace-nowrap"
+                  >
+                    {r.contentUpdatedAt ? "Edit" : "Open in editor"}
+                  </Link>
                   <button
                     onClick={(e) => handleDelete(r.id, e)}
                     disabled={deleting === r.id}

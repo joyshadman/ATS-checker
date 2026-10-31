@@ -20,7 +20,28 @@ import {
   type ResumeContent,
 } from "@/lib/resume/content";
 import { renderResumeText } from "@/lib/resume/render";
+import { readImportNotice, type ImportNotice } from "@/lib/resume/import";
 import type { ActionResult } from "@/types";
+
+type ResumeLink = { id: string; title: string };
+
+/** The newest imported copy of an upload (spec 0006), owner only. */
+function latestImportOf(userId: string, uploadId: string): Promise<ResumeLink | null> {
+  return prisma.resume.findFirst({
+    where: { importedFromId: uploadId, userId },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, title: true },
+  });
+}
+
+/** The upload a copy was imported from, owner only; null when it was deleted. */
+function importedFromOf(userId: string, importedFromId: string | null): Promise<ResumeLink | null> {
+  if (!importedFromId) return Promise.resolve(null);
+  return prisma.resume.findFirst({
+    where: { id: importedFromId, userId },
+    select: { id: true, title: true },
+  });
+}
 
 const createResumeSchema = z.object({ title: titleSchema });
 
@@ -166,6 +187,10 @@ export async function getResumeContent(id: string): Promise<
     contentUpdatedAt: Date | null;
     improvedContent: ResumeContent | null;
     hasDraft: boolean;
+    importNotice: ImportNotice | null;
+    importedFrom: ResumeLink | null;
+    latestImport: ResumeLink | null;
+    hasUploadText: boolean;
   }>
 > {
   return withAction(async (userId) => {
@@ -182,12 +207,21 @@ export async function getResumeContent(id: string): Promise<
       }
     }
 
+    const [importedFrom, latestImport] = await Promise.all([
+      importedFromOf(userId, resume.importedFromId),
+      content === null ? latestImportOf(userId, id) : Promise.resolve(null),
+    ]);
+
     return {
       title: resume.title,
       content,
       contentUpdatedAt: resume.contentUpdatedAt,
       improvedContent,
       hasDraft: resume.improvedContent !== null,
+      importNotice: readImportNotice(id, resume.importNotice),
+      importedFrom,
+      latestImport,
+      hasUploadText: !!resume.originalText?.trim(),
     };
   });
 }
@@ -215,6 +249,8 @@ type ResumeDetail = ResumeData & {
   contentText: string | null;
   contentUpdatedAt: Date | null;
   improvedContentText: string | null;
+  importedFrom: ResumeLink | null;
+  latestImport: ResumeLink | null;
   analyses: unknown[];
   interviews: unknown[];
 };
@@ -223,17 +259,24 @@ export async function getResume(id: string): Promise<ActionResult<ResumeDetail>>
   return withAction(async (userId) => {
     const resume = await prisma.resume.findFirst({
       where: { id, userId },
-      omit: { content: true },
+      omit: { content: true, importNotice: true },
       include: {
         analyses: { orderBy: { createdAt: "desc" }, take: 1 },
         interviews: { orderBy: { createdAt: "desc" }, take: 1 },
+        importedFrom: { select: { id: true, title: true, userId: true } },
       },
     });
 
     if (!resume) throw new Error("Resume not found");
 
-    const { improvedContent, ...rest } = resume;
-    return { ...rest, improvedContentText: renderStoredDraft(id, improvedContent) };
+    const latestImport = resume.contentUpdatedAt === null ? await latestImportOf(userId, id) : null;
+    const { improvedContent, importedFrom, ...rest } = resume;
+    return {
+      ...rest,
+      improvedContentText: renderStoredDraft(id, improvedContent),
+      importedFrom: importedFrom && importedFrom.userId === userId ? { id: importedFrom.id, title: importedFrom.title } : null,
+      latestImport,
+    };
   });
 }
 
@@ -243,6 +286,7 @@ export async function deleteResume(id: string): Promise<ActionResult<void>> {
       where: { id, userId },
     });
     revalidatePath("/dashboard");
+    revalidatePath("/resumes");
     return undefined;
   });
 }

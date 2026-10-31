@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { getResume } from "@/actions/resume";
+import { getAiBalanceForUser } from "@/actions/credits";
 import Link from "next/link";
+import { ImportResumeButton } from "@/components/resume/import-resume-button";
 import { ResumeActions } from "@/components/resume/resume-actions";
 import { ImproveDraftActions } from "@/components/resume/improve-draft-actions";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -8,6 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { ScoreCircle } from "@/components/ui/score-circle";
 import { notFound } from "next/navigation";
 import { scoreToVariant } from "@/lib/utils";
+
+// The import action (spec 0006) runs under this page and may take up to ~95 s, so a
+// reserved AI use is refunded or kept, never cut off in between.
+export const maxDuration = 120;
 
 export async function generateMetadata({
   params,
@@ -29,6 +35,8 @@ type ResumePageData = {
   contentText: string | null;
   contentUpdatedAt: Date | null;
   improvedContentText: string | null;
+  importedFrom: { id: string; title: string } | null;
+  latestImport: { id: string; title: string } | null;
   atsScore: number | null;
   createdAt: Date;
   updatedAt: Date;
@@ -92,8 +100,8 @@ export default async function ResumePage({
 }) {
   const { id } = await params;
   let resume: ResumePageData;
+  const [result, balance] = await Promise.all([getResume(id), getAiBalanceForUser()]);
   try {
-    const result = await getResume(id);
     if (!result.success) notFound();
     resume = result.data as ResumePageData;
   } catch {
@@ -167,7 +175,28 @@ export default async function ResumePage({
             })}
             <Badge variant={isBuilt ? "primary" : "default"}>{isBuilt ? "Built" : "Uploaded"}</Badge>
           </p>
+          {resume.importedFrom && (
+            <p className="text-sm text-muted mt-1">
+              Imported from{" "}
+              <Link
+                href={`/resumes/${resume.importedFrom.id}`}
+                className="font-medium text-accent underline underline-offset-2 hover:brightness-110"
+              >
+                {resume.importedFrom.title}
+              </Link>
+            </p>
+          )}
         </div>
+        {!isBuilt && (
+          <div className="self-start sm:self-auto">
+            <ImportResumeButton
+              resumeId={resume.id}
+              hasText={!!resume.originalText?.trim()}
+              balance={balance.success ? balance.data : null}
+              latestImport={resume.latestImport}
+            />
+          </div>
+        )}
         {isBuilt && (
           <Link
             href={`/resumes/${resume.id}/edit`}

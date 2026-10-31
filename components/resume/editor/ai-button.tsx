@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { PRICING_PATH } from "@/lib/ai/credits-shared";
 import type { SectionTarget } from "@/lib/resume/section-writing";
 import { aiButtonId, useAiWriting } from "./ai-writing";
 
@@ -15,7 +17,8 @@ export function SparkleIcon({ className = "w-4 h-4" }: { className?: string }) {
 /**
  * Starts an AI request for one target (spec 0003). Unavailable via aria-disabled (so
  * focus stays put) while a request runs, during the cooldown window, or when the
- * target has nothing to write from (`reason`, shown as visible helper text).
+ * target has nothing to write from (`reason`, shown as visible helper text). With no AI
+ * uses left (spec 0004) the "See pricing" hint replaces `reason`.
  */
 export function AiButton({
   aiKey,
@@ -29,10 +32,20 @@ export function AiButton({
   reason: string | null;
   buildTarget: () => SectionTarget;
 }) {
-  const { busy, cooldownLeft, request } = useAiWriting();
-  const unavailable = busy || cooldownLeft > 0 || reason !== null;
+  const { busy, cooldownLeft, outOfUses, request } = useAiWriting();
+  const unavailable = busy || cooldownLeft > 0 || outOfUses || reason !== null;
   const id = aiButtonId(aiKey);
-  const hintId = reason ? `${id}-hint` : undefined;
+  const hint = outOfUses ? (
+    <>
+      No AI uses left.{" "}
+      <Link href={PRICING_PATH} prefetch={false} className="font-semibold text-accent underline underline-offset-2">
+        See pricing
+      </Link>
+    </>
+  ) : (
+    reason
+  );
+  const hintId = hint ? `${id}-hint` : undefined;
 
   return (
     <div className="flex flex-col items-end gap-1">
@@ -53,9 +66,9 @@ export function AiButton({
         <SparkleIcon />
         {label}
       </button>
-      {reason && (
+      {hint && (
         <p id={hintId} className="text-[11px] text-muted text-right max-w-[16rem]">
-          {reason}
+          {hint}
         </p>
       )}
     </div>

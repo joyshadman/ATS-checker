@@ -34,6 +34,18 @@ export type AIErrorCode =
   | "INVALID_REQUEST"
   | "UNKNOWN";
 
+/** Per call request settings (spec 0006). Absent fields keep the defaults. */
+export type AICallOptions = {
+  maxTokens?: number;
+  timeoutMs?: number;
+  /** Extra attempts after the first: 0 means exactly one attempt. */
+  retries?: number;
+  /** false sends both prompts as given (no compressText). */
+  compress?: boolean;
+};
+
+type ResolvedOptions = { maxTokens: number; timeoutMs: number; retries: number };
+
 export type AIResult<T> =
   | { success: true; data: T }
   | {
@@ -134,8 +146,14 @@ export async function callAI<T = unknown>(
   systemPrompt: string,
   userPrompt: string,
   dedupKey?: string,
+  options?: AICallOptions,
 ): Promise<AIResult<T>> {
   const reqId = ++reqCounter;
+  const settings: ResolvedOptions = {
+    maxTokens: options?.maxTokens ?? 2048,
+    timeoutMs: options?.timeoutMs ?? TIMEOUT_MS,
+    retries: options?.retries ?? MAX_RETRIES,
+  };
   const startTime = Date.now();
 
   if (!API_KEY) {
@@ -165,9 +183,10 @@ export async function callAI<T = unknown>(
     };
   }
 
-  // Compress prompts
-  const compressedSystem = compressText(systemPrompt, 4000);
-  const compressedUser = compressText(userPrompt, 16000);
+  // Compress prompts (unless the caller needs the text exactly as given)
+  const compress = options?.compress ?? true;
+  const compressedSystem = compress ? compressText(systemPrompt, 4000) : systemPrompt;
+  const compressedUser = compress ? compressText(userPrompt, 16000) : userPrompt;
 
   // --- Tier 1: SHA-256 response cache (exact same prompts, any time) ---
   const cKey = cacheKey(compressedSystem, compressedUser);
@@ -204,6 +223,7 @@ export async function callAI<T = unknown>(
     compressedUser,
     reqId,
     startTime,
+    settings,
   );
 
   if (dedupKey) {
@@ -235,10 +255,11 @@ async function executeWithRetries<T>(
   userPrompt: string,
   reqId: number,
   startTime: number,
+  settings: ResolvedOptions,
 ): Promise<AIResult<T>> {
   let lastError: AIResult<T> | null = null;
 
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+  for (let attempt = 0; attempt <= settings.retries; attempt++) {
     if (attempt > 0) {
       const delay = Math.min(
         1000 * Math.pow(2, attempt - 1) + Math.random() * 500,
@@ -253,6 +274,8 @@ async function executeWithRetries<T>(
       userPrompt,
       reqId,
       startTime,
+      settings,
+      attempt < settings.retries,
     );
 
     if (result.success) return result;
@@ -276,9 +299,11 @@ async function executeOnce<T>(
   userPrompt: string,
   reqId: number,
   startTime: number,
+  settings: ResolvedOptions,
+  willRetry: boolean,
 ): Promise<AIResult<T>> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), settings.timeoutMs);
 
   try {
     const response = await fetch(`${BASE_URL}/chat/completions`, {
@@ -296,7 +321,7 @@ async function executeOnce<T>(
           { role: "user", content: userPrompt },
         ],
         temperature: 0.1,
-        max_tokens: 2048,
+        max_tokens: settings.maxTokens,
         response_format: { type: "json_object" },
       }),
       signal: controller.signal,
@@ -305,7 +330,7 @@ async function executeOnce<T>(
     clearTimeout(timer);
 
     if (!response.ok) {
-      return handleError<T>(response, reqId, startTime);
+      return handleError<T>(response, reqId, startTime, willRetry);
     }
 
     const data = await response.json();
@@ -322,6 +347,19 @@ async function executeOnce<T>(
         code: "PROVIDER_ERROR",
         error: "AI returned an empty response.",
         retryable: true,
+      };
+    }
+
+    if (data.choices?.[0]?.finish_reason === "length") {
+      log("fail", {
+        reqId,
+        error: "too_long",
+        duration: durationStr(startTime),
+      });
+      return {
+        success: false,
+        code: "INVALID_RESPONSE",
+        error: "The AI answer was too long. Try again.",
       };
     }
 
@@ -346,7 +384,7 @@ async function executeOnce<T>(
       return {
         success: false,
         code: "TIMEOUT",
-        error: "AI request timed out after 30 seconds.",
+        error: `AI request timed out after ${Math.round(settings.timeoutMs / 1000)} seconds.`,
         retryable: true,
       };
     }
@@ -368,6 +406,7 @@ async function handleError<T>(
   response: Response,
   reqId: number,
   startTime: number,
+  willRetry: boolean,
 ): Promise<AIResult<T>> {
   const status = response.status;
   const errorBody = await response.text().catch(() => "");
@@ -430,7 +469,7 @@ async function handleError<T>(
     return {
       success: false,
       code: "PROVIDER_ERROR",
-      error: `Provider error (${status}). Retrying...`,
+      error: willRetry ? `Provider error (${status}). Retrying...` : `Provider error (${status}).`,
       retryable: true,
     };
   }

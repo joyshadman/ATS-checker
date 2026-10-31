@@ -24,9 +24,12 @@ import { Dialog } from "@/components/ui/dialog";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { AlertCircle } from "@/components/ui/icons";
 import { countPlaceholders } from "@/lib/resume/placeholders";
+import type { AiBalanceView } from "@/lib/ai/credits-shared";
 import { AiWritingProvider, useAiWriting } from "./ai-writing";
 import { fieldId } from "./fields";
 import { TargetRoleBox } from "./target-role-box";
+import { ImportNotice } from "./import-notice";
+import type { ImportNotice as ImportNoticeData } from "@/lib/resume/import";
 import {
   CertificationsSection,
   ContactSection,
@@ -45,6 +48,11 @@ type Props = {
   /** Resume.contentUpdatedAt as an ISO string. */
   initialUpdatedAt: string;
   initialHasDraft: boolean;
+  /** AI uses left (spec 0004); null when the balance could not be loaded. */
+  initialBalance: AiBalanceView | null;
+  /** Set on copies made by import until dismissed (spec 0006). */
+  initialImportNotice?: ImportNoticeData | null;
+  importedFrom?: { id: string; title: string } | null;
 };
 
 type SaveState = "idle" | "saving" | "saved" | "conflict";
@@ -85,7 +93,16 @@ function matchesStored(values: ResumeForm, stored: { title: string; content: Res
   }
 }
 
-export function ResumeEditor({ resumeId, initialTitle, initialContent, initialUpdatedAt, initialHasDraft }: Props) {
+export function ResumeEditor({
+  resumeId,
+  initialTitle,
+  initialContent,
+  initialUpdatedAt,
+  initialHasDraft,
+  initialBalance,
+  initialImportNotice = null,
+  importedFrom = null,
+}: Props) {
   const form = useForm<ResumeForm>({
     defaultValues: toForm(initialTitle, initialContent),
     resolver: resumeFormResolver,
@@ -235,7 +252,7 @@ export function ResumeEditor({ resumeId, initialTitle, initialContent, initialUp
 
   return (
     <FormProvider {...form}>
-      <AiWritingProvider resumeId={resumeId}>
+      <AiWritingProvider resumeId={resumeId} initialBalance={initialBalance}>
       <form onSubmit={handleSubmit(onValid)} noValidate className="max-w-4xl mx-auto space-y-6">
         {/* Sticky bar: title, status, save */}
         <div className="sticky top-14 z-10 -mx-4 md:-mx-8 lg:-mx-10 px-4 md:px-8 lg:px-10 py-3 border-b border-border/60 bg-background/85 backdrop-blur-xl">
@@ -338,6 +355,10 @@ export function ResumeEditor({ resumeId, initialTitle, initialContent, initialUp
               &times;
             </button>
           </div>
+        )}
+
+        {initialImportNotice && (
+          <ImportNotice resumeId={resumeId} notice={initialImportNotice} importedFrom={importedFrom} />
         )}
 
         <TargetRoleBox />
