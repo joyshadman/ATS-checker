@@ -1,7 +1,7 @@
 # 0007. Resume viewer: built resumes render as A4 pages in one of three code templates, chosen per resume
 
 **Date**: 2026-10-31
-**Status**: Proposed
+**Status**: In Progress
 
 ## Summary
 

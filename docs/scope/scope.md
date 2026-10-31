@@ -24,7 +24,7 @@ _These are recommendations to keep your build orderly, not requirements. Skip an
 | 4 | AI usage limit & credit balance | Slice 3 | in-progress |
 | 5 | Pricing page (dummy) | Slice 3 | in-progress |
 | 6 | Import an existing resume into the editor | Slice 4 | in-progress |
-| 7 | PDF export | Slice 5 | planned |
+| 7 | PDF export | Slice 5 | in-progress |
 | 8 | Resume viewer & ATS templates | Slice 5 | in-progress |
 
 ## Already built
@@ -138,26 +138,33 @@ spec [0006](../specs/0006-import-resume-into-editor/index.md) · code in `action
 ### 8. Resume viewer & ATS templates · in-progress
 Show every built or imported resume as real A4 pages instead of plain text (one page when it fits, page 2 when it does not, a warning past 2), and let the user pick from several ATS friendly templates. Uploads keep their text view with the "Open in editor" button.
 **Done when:** a built resume's page shows it laid out as a resume in the chosen template, the user can switch between at least two ATS friendly templates and the choice is remembered, and the text stays selectable and in section order.
-spec [0007](../specs/0007-resume-viewer-ats-templates/index.md)
+spec [0007](../specs/0007-resume-viewer-ats-templates/index.md) · code in `components/resume/viewer/`, `lib/resume/templates.ts`, `lib/resume/format.ts`, `lib/resume/paginate.ts`, `actions/resume.ts`
 - [x] Design it (spec): `/architect resume viewer & ATS templates`
 - [ ] Build it: `/develop resume viewer & ATS templates`
-  - [ ] Columns, registry, and the Classic sheet on the detail page with the saved template picker (AC-1, AC-2, AC-3, AC-5, AC-6, AC-7, AC-9, AC-11, AC-12, AC-13, AC-14)
-  - [ ] Modern and Compact templates, plus the link style picker (AC-2, AC-4, AC-11)
-  - [ ] Draft as a second sheet, A4 pagination with the over two pages warning, and the edge states (AC-8, AC-10, AC-13 to AC-19)
+  - [x] Columns, registry, and the Classic sheet on the detail page with the saved template picker (AC-1, AC-2, AC-3, AC-5, AC-6, AC-7, AC-9, AC-11, AC-12, AC-13, AC-14)
+  - [x] Modern and Compact templates, plus the link style picker (AC-2, AC-4, AC-11)
+  - [x] Draft as a second sheet, A4 pagination with the over two pages warning, and the edge states (AC-8, AC-10, AC-13 to AC-19)
   - [ ] Light, dark, phone, and desktop checks against the A4 Figma frames (AC-1 to AC-19)
 - [ ] Verify it: `/check verify resume viewer & ATS templates`
 
-### 7. PDF export · needs a decision
+### 7. PDF export · in-progress
 Download a resume from the editor as a clean, single column, ATS friendly PDF.
 **Done when:** the user can download a PDF whose text is selectable and in section order, and it matches what the editor shows.
-- [ ] Design it (spec): `/architect PDF export`
+spec [0008](../specs/0008-pdf-export/index.md) · code in `components/resume/viewer/pdf-download-button.tsx`, `components/resume/viewer/paginated-sheet.tsx`, `components/resume/viewer/use-print-title.ts`, `app/globals.css`
+- [x] Design it (spec): `/architect PDF export`
+- [ ] Build it: `/develop PDF export`
+  - [x] Print path end to end: print copy of the measured pages, print stylesheet, and the file name (AC-2, AC-3, AC-6, AC-10, AC-11)
+  - [x] Download PDF button with its tip, the preparing, saving, and empty states, and the placeholder confirm (AC-1, AC-4, AC-5, AC-7, AC-8, AC-9, AC-12)
+  - [ ] Cross browser print checks against the viewer: Chrome, Edge, Firefox, Safari, light, dark, phone (AC-1 to AC-12)
+- [ ] Verify it: `/check verify PDF export`
 
 ## Deferred
 Out of scope for the current build pass, kept so the plan stays honest.
 - **Real payments**: Buy charges and adds credits to the balance · needs a decision · GA
 - **Credit history**: a list of credits bought and used · needs a decision
 - **Live preview in the editor**: show the formatted sheet beside the editor as you type, with the template picker there too · needs a decision · from spec 0007
-
+- **One click PDF download**: a real file without the print dialog (server side rendering of the same sheet) · needs a decision · from spec 0008
+cl
 ## Legend
 
 **The decision box.** Every feature carries exactly one, the sub task whose label ends with `(spec)`. Skills locate it by that `(spec)` suffix, never by an exact label. Every other box is an execution box and `/architect` never ticks one.

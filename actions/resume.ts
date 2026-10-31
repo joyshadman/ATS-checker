@@ -9,18 +9,26 @@ import {
   withAction,
   loadResumeWithAuth,
   readResumeContent,
-  renderStoredDraft,
 } from "@/lib/action-helpers";
 import {
   emptyResumeContent,
   parseResumeContent,
   RESUME_CONFLICT,
+  RESUME_NOT_FOUND,
   titleSchema,
   zodIssueMessage,
   type ResumeContent,
 } from "@/lib/resume/content";
 import { renderResumeText } from "@/lib/resume/render";
 import { readImportNotice, type ImportNotice } from "@/lib/resume/import";
+import {
+  linkStyleSchema,
+  resolveLinkStyle,
+  resolveTemplateId,
+  templateIdSchema,
+  type LinkStyle,
+  type TemplateId,
+} from "@/lib/resume/templates";
 import type { ActionResult } from "@/types";
 
 type ResumeLink = { id: string; title: string };
@@ -248,18 +256,33 @@ export async function getResumes(): Promise<ActionResult<ResumeData[]>> {
 type ResumeDetail = ResumeData & {
   contentText: string | null;
   contentUpdatedAt: Date | null;
+  content: ResumeContent | null;
+  contentUnreadable: boolean;
+  improvedContent: ResumeContent | null;
   improvedContentText: string | null;
+  templateId: TemplateId;
+  linkStyle: LinkStyle;
   importedFrom: ResumeLink | null;
   latestImport: ResumeLink | null;
   analyses: unknown[];
   interviews: unknown[];
 };
 
+/** Parsed stored sections, or null (logged) when they cannot be read. */
+function parseStored(resumeId: string, column: string, raw: Prisma.JsonValue): ResumeContent | null {
+  try {
+    return parseResumeContent(raw);
+  } catch (error) {
+    console.error(`[Resume] ${column} of ${resumeId} could not be parsed:`, error);
+    return null;
+  }
+}
+
 export async function getResume(id: string): Promise<ActionResult<ResumeDetail>> {
   return withAction(async (userId) => {
     const resume = await prisma.resume.findFirst({
       where: { id, userId },
-      omit: { content: true, importNotice: true },
+      omit: { importNotice: true },
       include: {
         analyses: { orderBy: { createdAt: "desc" }, take: 1 },
         interviews: { orderBy: { createdAt: "desc" }, take: 1 },
@@ -270,12 +293,58 @@ export async function getResume(id: string): Promise<ActionResult<ResumeDetail>>
     if (!resume) throw new Error("Resume not found");
 
     const latestImport = resume.contentUpdatedAt === null ? await latestImportOf(userId, id) : null;
-    const { improvedContent, importedFrom, ...rest } = resume;
+    const { content: rawContent, improvedContent: rawImproved, importedFrom, templateId, linkStyle, ...rest } = resume;
+    const content = rawContent === null ? null : parseStored(id, "content", rawContent);
+    const improvedContent = rawImproved === null ? null : parseStored(id, "improvedContent", rawImproved);
     return {
       ...rest,
-      improvedContentText: renderStoredDraft(id, improvedContent),
+      content,
+      contentUnreadable: rawContent !== null && content === null,
+      improvedContent,
+      improvedContentText: improvedContent ? renderResumeText(improvedContent) : null,
+      templateId: resolveTemplateId(templateId, id),
+      linkStyle: resolveLinkStyle(linkStyle, id),
       importedFrom: importedFrom && importedFrom.userId === userId ? { id: importedFrom.id, title: importedFrom.title } : null,
       latestImport,
+    };
+  });
+}
+
+const appearanceSchema = z
+  .object({
+    resumeId: z.string().min(1, "Required"),
+    templateId: templateIdSchema.optional(),
+    linkStyle: linkStyleSchema.optional(),
+  })
+  .refine((v) => v.templateId !== undefined || v.linkStyle !== undefined, "Pick a template or a link style");
+
+/**
+ * Saves the viewer template and/or link style (spec 0007). Writes only those two
+ * columns, so content versions, analyses, and open editors are untouched (AC-5).
+ */
+export async function setResumeAppearance(input: {
+  resumeId: string;
+  templateId?: TemplateId;
+  linkStyle?: LinkStyle;
+}): Promise<ActionResult<{ templateId: TemplateId; linkStyle: LinkStyle }>> {
+  return withAction(async (userId) => {
+    const parsed = appearanceSchema.safeParse(input);
+    if (!parsed.success) throw new Error(zodIssueMessage(parsed.error));
+    const { resumeId, templateId, linkStyle } = parsed.data;
+
+    const resume = await loadResumeWithAuth(userId, resumeId);
+    if (resume.content === null) throw new Error("This resume has no sections");
+
+    const { count } = await prisma.resume.updateMany({
+      where: { id: resumeId, userId },
+      data: { templateId, linkStyle },
+    });
+    if (count !== 1) throw new Error(RESUME_NOT_FOUND);
+
+    revalidatePath(`/resumes/${resumeId}`);
+    return {
+      templateId: templateId ?? resolveTemplateId(resume.templateId, resumeId),
+      linkStyle: linkStyle ?? resolveLinkStyle(resume.linkStyle, resumeId),
     };
   });
 }

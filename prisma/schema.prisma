@@ -86,7 +86,11 @@ model Resume {
   importedCopies Resume[] @relation("ResumeImport")
   importNotice   Json?
 
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Viewer appearance (spec 0007). Read through resolveTemplateId / resolveLinkStyle.
+  templateId String @default("classic")
+  linkStyle  String @default("url")
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   analyses   Analysis[]
   interviews Interview[]
 

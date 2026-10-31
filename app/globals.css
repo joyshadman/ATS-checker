@@ -20,6 +20,54 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
+  --color-sheet-paper: var(--sheet-paper);
+  --color-sheet-ink: var(--sheet-ink);
+  --color-sheet-muted: var(--sheet-muted);
+  --color-sheet-rule: var(--sheet-rule);
+  --color-sheet-accent: var(--sheet-accent);
+  --color-sheet-mark: var(--sheet-mark);
+  --font-sheet-classic: var(--font-source-serif-4);
+  --font-sheet-modern: var(--font-inter);
+  --font-sheet-compact: var(--font-ibm-plex-sans);
+}
+
+/* ─── Resume sheet (spec 0007) ───
+   Printed paper colors. Deliberately NOT redefined under .dark: the sheet stays
+   white paper with dark ink in both themes (AC-9). */
+
+:root {
+  --sheet-paper: #FFFFFF;
+  --sheet-ink: #111111;
+  --sheet-muted: #333333;
+  --sheet-rule: #111111;
+  --sheet-accent: #1F3A5F;
+  --sheet-mark: #FDE68A;
+}
+
+/* ─── PDF export (spec 0008) ───
+   Only acts on a page that mounts a [data-print-root] (the resume viewer's print copy):
+   everything else in <body> is hidden and each [data-print-page] prints as one A4 sheet.
+   The @page rule lives inside that print root, so other pages print as before. */
+
+@media print {
+  body:has(> [data-print-root]) {
+    background: var(--sheet-paper) !important;
+    margin: 0;
+    padding: 0;
+  }
+
+  body:has(> [data-print-root]) > :not([data-print-root]) {
+    display: none !important;
+  }
+
+  [data-print-page] {
+    break-after: page;
+    overflow: visible;
+  }
+
+  [data-print-page]:last-child {
+    break-after: auto;
+  }
 }
 
 /* ─── Light Theme: Amber Walnut Morning ─── */

@@ -5,6 +5,9 @@ import Link from "next/link";
 import { ImportResumeButton } from "@/components/resume/import-resume-button";
 import { ResumeActions } from "@/components/resume/resume-actions";
 import { ImproveDraftActions } from "@/components/resume/improve-draft-actions";
+import { ResumeViewer } from "@/components/resume/viewer/resume-viewer";
+import type { ResumeContent } from "@/lib/resume/content";
+import type { LinkStyle, TemplateId } from "@/lib/resume/templates";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScoreCircle } from "@/components/ui/score-circle";
@@ -34,7 +37,12 @@ type ResumePageData = {
   improvedText: string | null;
   contentText: string | null;
   contentUpdatedAt: Date | null;
+  content: ResumeContent | null;
+  contentUnreadable: boolean;
+  improvedContent: ResumeContent | null;
   improvedContentText: string | null;
+  templateId: TemplateId;
+  linkStyle: LinkStyle;
   importedFrom: { id: string; title: string } | null;
   latestImport: { id: string; title: string } | null;
   atsScore: number | null;
@@ -322,6 +330,35 @@ export default async function ResumePage({
         </Card>
       )}
 
+      {resume.content ? (
+        // Built resume (spec 0007): A4 pages, with the improve draft as a second sheet.
+        <ResumeViewer
+          resumeId={resume.id}
+          content={resume.content}
+          draft={resume.improvedContent}
+          initialTemplateId={resume.templateId}
+          initialLinkStyle={resume.linkStyle}
+          draftActions={<ImproveDraftActions resumeId={resume.id} />}
+        />
+      ) : null}
+
+      {resume.content && !resume.improvedContent && resume.improvedText && (
+        <Card className="animate-slide-up">
+          <CardHeader>
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2.5">
+              <span className="w-1.5 h-5 rounded-full bg-gradient-success inline-block" />
+              Improved Resume
+            </h2>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-xl bg-surface/60 border border-border/60 p-5 text-sm text-foreground whitespace-pre-wrap max-h-[500px] overflow-y-auto font-mono leading-relaxed">
+              {resume.improvedText}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!resume.content && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="animate-slide-up">
           <CardHeader>
@@ -329,6 +366,11 @@ export default async function ResumePage({
               <span className="w-1.5 h-5 rounded-full bg-gradient-accent inline-block" />
               Original Resume
             </h2>
+            {resume.contentUnreadable && (
+              <p className="text-sm text-muted mt-1">
+                This resume&apos;s sections could not be read, so it is shown as plain text.
+              </p>
+            )}
           </CardHeader>
           <CardContent>
             <div className="rounded-xl bg-surface/60 border border-border/60 p-5 text-sm text-foreground whitespace-pre-wrap max-h-[500px] overflow-y-auto font-mono leading-relaxed">
@@ -359,6 +401,7 @@ export default async function ResumePage({
           </Card>
         )}
       </div>
+      )}
 
       {latestInterview && latestInterview.questions && (
         <Card className="animate-slide-up">
