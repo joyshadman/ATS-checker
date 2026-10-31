@@ -72,6 +72,12 @@ model Resume {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // Structured sections (spec 0001). Null content means upload only.
+  content          Json?
+  contentText      String?
+  contentUpdatedAt DateTime?
+  improvedContent  Json?
+
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   analyses   Analysis[]
   interviews Interview[]
@@ -111,6 +117,7 @@ model Analysis {
   actionVerbs         String?
   overallImprovements String?
   suggestions         String?
+  sourceContentAt     DateTime?
   createdAt           DateTime @default(now())
 
   resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
@@ -119,8 +126,9 @@ model Analysis {
 model Interview {
   id        String   @id @default(cuid())
   resumeId  String
-  questions String?
-  createdAt DateTime @default(now())
+  questions       String?
+  sourceContentAt DateTime?
+  createdAt       DateTime @default(now())
 
   resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
 }

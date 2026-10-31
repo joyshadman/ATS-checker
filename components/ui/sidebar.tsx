@@ -29,6 +29,15 @@ const links = [
     ),
   },
   {
+    href: "/resumes/new",
+    label: "Resume Maker",
+    icon: (
+      <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+      </svg>
+    ),
+  },
+  {
     href: "/cover-letters",
     label: "Cover Letters",
     icon: (
@@ -72,10 +81,16 @@ export function Sidebar({ email }: Props) {
     await signOut();
   }, []);
 
-  function isActive(href: string) {
-    if (href === "/dashboard") return pathname === "/dashboard";
-    return pathname.startsWith(href);
-  }
+  // One active link for the whole list: the longest href matching the path, so
+  // /resumes/new lights only Resume Maker. /dashboard matches only exactly.
+  const activeHref = links
+    .map((link) => link.href)
+    .filter((href) =>
+      href === "/dashboard"
+        ? pathname === href
+        : pathname === href || pathname.startsWith(`${href}/`)
+    )
+    .sort((a, b) => b.length - a.length)[0];
 
   return (
     <>
@@ -139,11 +154,12 @@ export function Sidebar({ email }: Props) {
         {/* Nav */}
         <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
           {links.map((link) => {
-            const active = isActive(link.href);
+            const active = link.href === activeHref;
             return (
               <Link
                 key={link.href}
                 href={link.href}
+                aria-current={active ? "page" : undefined}
                 className={`relative flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-150 ${
                   active
                     ? "bg-gradient-primary text-cream shadow-md"

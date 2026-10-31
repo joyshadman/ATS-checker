@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { getResume } from "@/actions/resume";
+import Link from "next/link";
 import { ResumeActions } from "@/components/resume/resume-actions";
+import { ImproveDraftActions } from "@/components/resume/improve-draft-actions";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScoreCircle } from "@/components/ui/score-circle";
@@ -24,10 +26,14 @@ type ResumePageData = {
   title: string;
   originalText: string | null;
   improvedText: string | null;
+  contentText: string | null;
+  contentUpdatedAt: Date | null;
+  improvedContentText: string | null;
   atsScore: number | null;
   createdAt: Date;
   updatedAt: Date;
   analyses: Array<{
+    sourceContentAt: Date | null;
     formattingScore: number | null;
     keywordScore: number | null;
     skillsScore: number | null;
@@ -40,9 +46,19 @@ type ResumePageData = {
     overallImprovements: string | null;
   }>;
   interviews: Array<{
+    sourceContentAt: Date | null;
     questions: string | null;
   }>;
 };
+
+/** A result is out of date when it was made from a different content version (null equals null). */
+function isStale(sourceContentAt: Date | null, contentUpdatedAt: Date | null): boolean {
+  return (sourceContentAt?.getTime() ?? null) !== (contentUpdatedAt?.getTime() ?? null);
+}
+
+function OutOfDateBadge() {
+  return <Badge variant="warning">Out of date, run again</Badge>;
+}
 
 function SectionCard({ label, value }: { label: string; value: number | null }) {
   return (
@@ -84,8 +100,14 @@ export default async function ResumePage({
     notFound();
   }
 
+  const resumeText = resume.contentText ?? resume.originalText;
+  const improvedText = resume.improvedContentText ?? resume.improvedText;
+
   const latestAnalysis = resume.analyses?.[0] ?? null;
   const latestInterview = resume.interviews?.[0] ?? null;
+  const isBuilt = resume.contentUpdatedAt !== null;
+  const analysisStale = !!latestAnalysis && isStale(latestAnalysis.sourceContentAt, resume.contentUpdatedAt);
+  const interviewStale = !!latestInterview && isStale(latestInterview.sourceContentAt, resume.contentUpdatedAt);
 
   const sections = latestAnalysis
     ? [
@@ -136,23 +158,35 @@ export default async function ResumePage({
           <h1 className="text-3xl font-bold text-foreground tracking-tight">
             {resume.title}
           </h1>
-          <p className="text-muted mt-1 text-sm">
-            Uploaded{" "}
+          <p className="text-muted mt-1 text-sm flex items-center gap-2">
+            {isBuilt ? "Created" : "Uploaded"}{" "}
             {new Date(resume.createdAt).toLocaleDateString(undefined, {
               year: "numeric",
               month: "long",
               day: "numeric",
             })}
+            <Badge variant={isBuilt ? "primary" : "default"}>{isBuilt ? "Built" : "Uploaded"}</Badge>
           </p>
         </div>
+        {isBuilt && (
+          <Link
+            href={`/resumes/${resume.id}/edit`}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-primary px-4 py-2 text-sm font-medium text-cream shadow-sm hover:brightness-110 hover:shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background self-start sm:self-auto"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Edit resume
+          </Link>
+        )}
       </div>
 
       <div className="animate-slide-up stagger-1">
         <ResumeActions
           resumeId={resume.id}
-          hasAnalysis={!!latestAnalysis}
-          hasImprovement={!!resume.improvedText}
-          hasInterview={!!latestInterview}
+          hasAnalysis={!!latestAnalysis && !analysisStale}
+          hasImprovement={!!improvedText}
+          hasInterview={!!latestInterview && !interviewStale}
         />
       </div>
 
@@ -168,6 +202,11 @@ export default async function ResumePage({
                 <Badge variant={badgeVariant} className="mt-2">
                   {badgeLabel}
                 </Badge>
+                {analysisStale && (
+                  <div className="mt-2">
+                    <OutOfDateBadge />
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -264,22 +303,28 @@ export default async function ResumePage({
           </CardHeader>
           <CardContent>
             <div className="rounded-xl bg-surface/60 border border-border/60 p-5 text-sm text-foreground whitespace-pre-wrap max-h-[500px] overflow-y-auto font-mono leading-relaxed">
-              {resume.originalText ?? "No text content"}
+              {resumeText ?? "No text content"}
             </div>
           </CardContent>
         </Card>
 
-        {resume.improvedText && (
+        {improvedText && (
           <Card className="animate-slide-up stagger-1">
             <CardHeader>
               <h2 className="text-lg font-semibold text-foreground flex items-center gap-2.5">
                 <span className="w-1.5 h-5 rounded-full bg-gradient-success inline-block" />
                 Improved Resume
               </h2>
+              {resume.improvedContentText && (
+                <p className="text-sm text-muted mt-1">
+                  A draft. Accept it to replace your sections, or discard it.
+                </p>
+              )}
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              {resume.improvedContentText && <ImproveDraftActions resumeId={resume.id} />}
               <div className="rounded-xl bg-surface/60 border border-border/60 p-5 text-sm text-foreground whitespace-pre-wrap max-h-[500px] overflow-y-auto font-mono leading-relaxed">
-                {resume.improvedText}
+                {improvedText}
               </div>
             </CardContent>
           </Card>
@@ -292,6 +337,7 @@ export default async function ResumePage({
             <h2 className="text-lg font-semibold text-foreground flex items-center gap-2.5">
               <span className="w-1.5 h-5 rounded-full bg-gradient-warning inline-block" />
               Interview Questions
+              {interviewStale && <OutOfDateBadge />}
             </h2>
           </CardHeader>
           <CardContent>

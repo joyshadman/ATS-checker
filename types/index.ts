@@ -37,6 +37,13 @@ export type ResumeImprovementResponse = {
   keyChanges: string[];
 };
 
+/** AI response for improving a sectioned resume; merged by mergeImprovement. */
+export type StructuredResumeImprovementResponse = {
+  summary?: string;
+  entries: Array<{ id: string; bullets: string[] }>;
+  keyChanges: string[];
+};
+
 export type CoverLetterAnalysisResponse = {
   score: number;
   atsFriendliness: number;
@@ -74,6 +81,21 @@ export type InterviewQuestion = {
 export type InterviewResponse = {
   questions: InterviewQuestion[];
 };
+
+/** Raw AI answer for section writing (spec 0003); unknown until cleaned. */
+export type SectionWritingAIResponse = {
+  summary?: unknown;
+  bullets?: unknown;
+  skills?: unknown;
+};
+
+export type SkillAddition = { category: string; items: string[] };
+
+/** Cleaned section writing suggestion returned to the editor (spec 0003). */
+export type SectionSuggestion =
+  | { kind: "summary"; summary: string; unchanged: boolean }
+  | { kind: "bullets"; entryId: string; bullets: string[]; unchanged: boolean }
+  | { kind: "skills"; additions: SkillAddition[] };
 
 export type ActionResult<T> =
   | { success: true; data: T }

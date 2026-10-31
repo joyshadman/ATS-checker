@@ -12,6 +12,8 @@ type Resume = {
   title: string;
   atsScore: number | null;
   createdAt: Date;
+  /** Set for resumes built in the editor (spec 0002). */
+  contentUpdatedAt: Date | null;
 };
 
 type SortKey = "newest" | "oldest" | "score";
@@ -107,12 +109,12 @@ export function ResumeList({ resumes: initial }: { resumes: Resume[] }) {
             </svg>
           </div>
           <p className="text-sm font-medium text-foreground">
-            {search ? "No resumes match your search" : "No resumes uploaded yet"}
+            {search ? "No resumes match your search" : "No resumes yet"}
           </p>
           <p className="text-xs text-muted mt-1">
             {search
               ? "Try a different search term"
-              : "Upload your first resume from the dashboard"}
+              : "Build one with New resume, or upload a file from the dashboard"}
           </p>
         </div>
       ) : (
@@ -127,47 +129,62 @@ export function ResumeList({ resumes: initial }: { resumes: Resume[] }) {
                     : "danger"
                 : "default";
             return (
-              <Link
+              <div
                 key={r.id}
-                href={`/resumes/${r.id}`}
-                className="flex items-center justify-between rounded-2xl border bg-card px-5 py-4 hover:bg-card-hover hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200 group animate-slide-up"
+                className="relative flex items-center justify-between rounded-2xl border bg-card px-5 py-4 hover:bg-card-hover hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200 group animate-slide-up focus-within:ring-2 focus-within:ring-accent/30"
                 style={{ animationDelay: `${(i + 2) * 40}ms` }}
               >
                 <div className="flex items-center gap-4 min-w-0 flex-1">
                   <div className="w-10 h-10 rounded-xl bg-gradient-card flex items-center justify-center shrink-0">
-                    <svg className="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                    <svg className="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
                   <div className="min-w-0">
-                    <div className="font-medium text-foreground truncate">
+                    {/* The title link covers the whole row; Edit and Delete sit above it. */}
+                    <Link
+                      href={`/resumes/${r.id}`}
+                      className="font-medium text-foreground truncate block focus:outline-none after:absolute after:inset-0 after:rounded-2xl"
+                    >
                       {r.title}
-                    </div>
-                    <div className="text-xs text-muted mt-0.5">
+                    </Link>
+                    <div className="text-xs text-muted mt-0.5 flex items-center gap-2">
                       {new Date(r.createdAt).toLocaleDateString(undefined, {
                         year: "numeric",
                         month: "short",
                         day: "numeric",
                       })}
+                      <Badge variant={r.contentUpdatedAt ? "primary" : "default"}>
+                        {r.contentUpdatedAt ? "Built" : "Uploaded"}
+                      </Badge>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 shrink-0 ml-3">
+                <div className="relative z-10 flex items-center gap-2 shrink-0 ml-3">
                   <Badge variant={scoreVariant}>
                     {r.atsScore != null ? `${r.atsScore}%` : "Pending"}
                   </Badge>
+                  {r.contentUpdatedAt && (
+                    <Link
+                      href={`/resumes/${r.id}/edit`}
+                      aria-label={`Edit ${r.title}`}
+                      className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-accent hover:bg-accent/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                    >
+                      Edit
+                    </Link>
+                  )}
                   <button
                     onClick={(e) => handleDelete(r.id, e)}
                     disabled={deleting === r.id}
-                    className="rounded-lg p-1.5 text-muted opacity-0 group-hover:opacity-100 hover:text-danger hover:bg-danger/10 transition-all disabled:opacity-50"
-                    aria-label="Delete resume"
+                    className="rounded-lg p-1.5 text-muted opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-danger hover:bg-danger/10 transition-all disabled:opacity-50"
+                    aria-label={`Delete ${r.title}`}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                       <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>
                 </div>
-              </Link>
+              </div>
             );
           })}
         </div>

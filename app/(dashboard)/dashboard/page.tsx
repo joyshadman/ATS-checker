@@ -34,6 +34,7 @@ export default async function DashboardPage() {
     title: string;
     atsScore: number | null;
     updatedAt: Date;
+    contentUpdatedAt: Date | null;
   }[] = [];
   let totalCoverLetters = 0;
 
@@ -55,6 +56,7 @@ export default async function DashboardPage() {
             title: true,
             atsScore: true,
             updatedAt: true,
+            contentUpdatedAt: true,
           },
         }),
         prisma.coverLetter.count({ where: { userId: user.id } }),
@@ -211,12 +213,15 @@ export default async function DashboardPage() {
                       <span className="font-medium text-foreground truncate block">
                         {r.title}
                       </span>
-                      <span className="text-xs text-muted">
+                      <span className="text-xs text-muted flex items-center gap-2">
                         {new Date(r.updatedAt).toLocaleDateString(undefined, {
                           month: "short",
                           day: "numeric",
                           year: "numeric",
                         })}
+                        <Badge variant={r.contentUpdatedAt ? "primary" : "default"}>
+                          {r.contentUpdatedAt ? "Built" : "Uploaded"}
+                        </Badge>
                       </span>
                     </div>
                   </div>

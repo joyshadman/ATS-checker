@@ -35,6 +35,7 @@ actions/              # Server Actions
   interview.ts        # generateInterviewQuestions, getInterviews
 app/                  # Next.js App Router
   api/auth/[...all]/route.ts   # Better Auth route handler
+  api/ai-test/route.ts         # AI smoke test route (unauthenticated)
   auth/login/         # Login page
   auth/register/      # Register page
   (dashboard)/        # Protected routes behind auth check
@@ -49,8 +50,13 @@ components/
   forms/              # resume-upload-form, cover-letter-upload-form
   resume/             # resume-actions (analyze/improve/interview/delete/job-match)
   cover-letter/       # cover-letter-actions (analyze/improve/delete)
+  ui/                 # Shared UI primitives (button, card, dialog, toast, sidebar, ...)
+hooks/                # use-async-action
 lib/
+  action-helpers.ts   # withAction wrapper, ActionResult, ownership loaders
   ai/client.ts        # OpenRouter client: callAI<T>(systemPrompt, userPrompt, dedupKey?)
+  ai/models.ts        # getAIModel(), reads OPENROUTER_MODEL
+  ai/prompts.ts       # compressText() prompt trimming
   auth/auth.ts        # Better Auth server config (email/password + optional Google)
   auth/client.ts      # createAuthClient for signIn, signUp, signOut, useSession
   auth/url.ts         # Dynamic base URL resolution (supports localhost, Vercel, custom)
@@ -69,6 +75,8 @@ types/index.ts        # All response types: ATSAnalysisResponse, JobMatchRespons
 - **AI prompts** always request `response_format: { type: "json_object" }` from OpenRouter
 - **Auth** is handled entirely by Better Auth — do NOT add custom session/credential logic
 - **File uploads** are handled via FormData + Server Actions (no API routes needed)
+- **Server actions wrap their body in `withAction()`** from `lib/action-helpers.ts` (auth check, cooldown, error to `{ success: false }`). Load records with `loadResumeWithAuth` / `loadCoverLetterWithAuth` so ownership is always checked.
+- **Tests:** no test runner is set up yet.
 
 ## Environment Variables Required
 
@@ -124,3 +132,8 @@ Non-retryable errors (401, 403, credit exhausted, etc.) halt immediately and do 
 - The `getServerBaseURL()` / `getClientBaseURL()` in `lib/auth/url.ts` auto-detect the deployment URL:
   - Priority: `BETTER_AUTH_URL` > `VERCEL_URL` > `http://localhost:3000`
   - Client-side uses `window.location.origin` when available (no build-time inlining issues)
+
+## Context files
+
+- [lib/ai/AGENTS.md](lib/ai/AGENTS.md) (OpenRouter client: required env, caching, retries, error codes)
+- [lib/parser/AGENTS.md](lib/parser/AGENTS.md) (PDF/DOCX/TXT parsing and the pdfjs bundling workarounds)

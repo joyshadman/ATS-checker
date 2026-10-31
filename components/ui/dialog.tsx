@@ -18,6 +18,7 @@ export function Dialog({
   children,
 }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -38,6 +39,42 @@ export function Dialog({
     return () => document.removeEventListener("keydown", handleEscape);
   }, [open, onClose]);
 
+  // Move focus into the dialog, keep Tab inside it, and give focus back on close.
+  useEffect(() => {
+    if (!open) return;
+    const trigger = document.activeElement as HTMLElement | null;
+    const panel = panelRef.current;
+    const focusable = () =>
+      Array.from(
+        panel?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), a[href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        ) ?? []
+      );
+    // Prefer the first action in the body over the header's close button.
+    const items = focusable();
+    (items[1] ?? items[0])?.focus();
+
+    function handleTab(e: KeyboardEvent) {
+      if (e.key !== "Tab") return;
+      const list = focusable();
+      if (list.length === 0) return;
+      const first = list[0];
+      const last = list[list.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener("keydown", handleTab);
+    return () => {
+      document.removeEventListener("keydown", handleTab);
+      trigger?.focus?.();
+    };
+  }, [open]);
+
   if (!open) return null;
 
   return (
@@ -52,7 +89,7 @@ export function Dialog({
       aria-labelledby="dialog-title"
     >
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm animate-fade-in" />
-      <div className="relative w-full max-w-md rounded-2xl border bg-card shadow-float p-6 space-y-4 animate-scale-in">
+      <div ref={panelRef} className="relative w-full max-w-md rounded-2xl border bg-card shadow-float p-6 space-y-4 animate-scale-in">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <h2
@@ -66,6 +103,7 @@ export function Dialog({
             )}
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="rounded-lg p-1.5 text-muted hover:text-foreground hover:bg-surface transition-colors"
             aria-label="Close"

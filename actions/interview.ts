@@ -7,7 +7,7 @@ import {
   buildInterviewPrompt,
 } from "@/lib/prompts/interview";
 import type { InterviewResponse, ActionResult } from "@/types";
-import { withAction, loadResumeWithAuth } from "@/lib/action-helpers";
+import { withAction, loadResumeWithAuth, getResumeText, contentVersionKey } from "@/lib/action-helpers";
 import { revalidatePath } from "next/cache";
 
 export async function generateInterviewQuestions(
@@ -17,11 +17,12 @@ export async function generateInterviewQuestions(
   return withAction(
     async (userId) => {
       const resume = await loadResumeWithAuth(userId, resumeId);
+      const resumeText = getResumeText(resume);
 
-      if (!resume.originalText) throw new Error("Resume has no text content");
+      if (!resumeText) throw new Error("Resume has no text content");
 
       const existingInterview = await prisma.interview.findFirst({
-        where: { resumeId, questions: { not: null } },
+        where: { resumeId, questions: { not: null }, sourceContentAt: resume.contentUpdatedAt },
         orderBy: { createdAt: "desc" },
       });
       if (existingInterview?.questions) {
@@ -31,8 +32,8 @@ export async function generateInterviewQuestions(
 
       const aiResult = await callAI<InterviewResponse>(
         INTERVIEW_QUESTIONS_SYSTEM_PROMPT,
-        buildInterviewPrompt(resume.originalText, jobDescription),
-        `interview:${resumeId}`
+        buildInterviewPrompt(resumeText, jobDescription),
+        `interview:${resumeId}:${contentVersionKey(resume)}`
       );
 
       if (!aiResult.success) throw new Error(aiResult.error);
@@ -43,6 +44,7 @@ export async function generateInterviewQuestions(
         data: {
           resumeId,
           questions: JSON.stringify(result.questions),
+          sourceContentAt: resume.contentUpdatedAt,
         },
       });
 
@@ -54,7 +56,8 @@ export async function generateInterviewQuestions(
 }
 
 export async function getInterviews(resumeId: string): Promise<ActionResult<unknown[]>> {
-  return withAction(async () => {
+  return withAction(async (userId) => {
+    await loadResumeWithAuth(userId, resumeId);
     return prisma.interview.findMany({
       where: { resumeId },
       orderBy: { createdAt: "desc" },

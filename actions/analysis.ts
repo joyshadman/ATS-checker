@@ -18,7 +18,13 @@ import type {
   SectionScores,
   ActionResult,
 } from "@/types";
-import { withAction, loadResumeWithAuth, loadCoverLetterWithAuth } from "@/lib/action-helpers";
+import {
+  withAction,
+  loadResumeWithAuth,
+  loadCoverLetterWithAuth,
+  getResumeText,
+  contentVersionKey,
+} from "@/lib/action-helpers";
 import { revalidatePath } from "next/cache";
 
 function safeParseJson(json: string | null): string[] {
@@ -72,11 +78,17 @@ export async function analyzeResume(resumeId: string, jobDescription?: string): 
   return withAction(
     async (userId) => {
       const resume = await loadResumeWithAuth(userId, resumeId);
+      const resumeText = getResumeText(resume);
 
-      if (!resume.originalText) throw new Error("Resume has no text content");
+      if (!resumeText) throw new Error("Resume has no text content");
 
       const existingAnalysis = await prisma.analysis.findFirst({
-        where: { resumeId, jobDescription: jobDescription ?? null, atsScore: { not: null } },
+        where: {
+          resumeId,
+          jobDescription: jobDescription ?? null,
+          atsScore: { not: null },
+          sourceContentAt: resume.contentUpdatedAt,
+        },
         orderBy: { createdAt: "desc" },
       });
       if (existingAnalysis) {
@@ -108,8 +120,8 @@ export async function analyzeResume(resumeId: string, jobDescription?: string): 
 
       const aiResult = await callAI<SimplifiedAIResponse>(
         ATS_ANALYSIS_SYSTEM_PROMPT,
-        buildATSAnalysisPrompt(resume.originalText, jobDescription),
-        `analyze:${resumeId}`
+        buildATSAnalysisPrompt(resumeText, jobDescription),
+        `analyze:${resumeId}:${contentVersionKey(resume)}`
       );
 
       if (!aiResult.success) throw new Error(aiResult.error);
@@ -137,6 +149,7 @@ export async function analyzeResume(resumeId: string, jobDescription?: string): 
           actionVerbs: JSON.stringify(analysis.actionVerbs),
           overallImprovements: JSON.stringify(analysis.overallImprovements),
           suggestions: JSON.stringify(analysis.suggestions),
+          sourceContentAt: resume.contentUpdatedAt,
         },
       });
 
@@ -206,13 +219,14 @@ export async function matchResumeToJob(resumeId: string, jobDescription: string)
   return withAction(
     async (userId) => {
       const resume = await loadResumeWithAuth(userId, resumeId);
+      const resumeText = getResumeText(resume);
 
-      if (!resume.originalText) throw new Error("Resume has no text content");
+      if (!resumeText) throw new Error("Resume has no text content");
 
       const match = await callAI<JobMatchResponse>(
         JOB_MATCH_SYSTEM_PROMPT,
-        buildJobMatchPrompt(resume.originalText, jobDescription),
-        `match:${resumeId}`
+        buildJobMatchPrompt(resumeText, jobDescription),
+        `match:${resumeId}:${contentVersionKey(resume)}`
       );
 
       if (!match.success) throw new Error(match.error);
