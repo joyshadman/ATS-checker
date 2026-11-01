@@ -22,7 +22,7 @@ import {
 const entryGap = (first: boolean) => (first ? "pt-[8px]" : "pt-[10px]");
 
 function blocks(content: ResumeContent, options: SheetOptions) {
-  const { highlight, linkStyle } = options;
+  const { highlight } = options;
   const text = (value: string) => <Placeholders text={value} highlight={highlight} />;
 
   return buildBlocks(content, options, {
@@ -61,7 +61,7 @@ function blocks(content: ResumeContent, options: SheetOptions) {
         {(p.role || p.url) && (
           <Row
             left={p.role ? <em>{text(p.role)}</em> : null}
-            right={p.url ? <SheetLink link={{ label: p.name, url: p.url }} style={linkStyle} /> : undefined}
+            right={p.url ? <SheetLink link={{ label: p.name, url: p.url }} options={options} /> : undefined}
           />
         )}
       </div>
@@ -80,7 +80,7 @@ function blocks(content: ResumeContent, options: SheetOptions) {
           <>
             <strong className="font-bold">{text(c.name)}</strong>
             {c.issuer && <>, {text(c.issuer)}</>}
-            {c.url && <>, <SheetLink link={{ label: c.name, url: c.url }} style={linkStyle} /></>}
+            {c.url && <>, <SheetLink link={{ label: c.name, url: c.url }} options={options} /></>}
           </>
         }
         right={c.date ? <DateText>{certificationDate(c)}</DateText> : undefined}

@@ -199,6 +199,8 @@ export async function getResumeContent(id: string): Promise<
     importedFrom: ResumeLink | null;
     latestImport: ResumeLink | null;
     hasUploadText: boolean;
+    templateId: TemplateId;
+    linkStyle: LinkStyle;
   }>
 > {
   return withAction(async (userId) => {
@@ -230,6 +232,9 @@ export async function getResumeContent(id: string): Promise<
       importedFrom,
       latestImport,
       hasUploadText: !!resume.originalText?.trim(),
+      // The editor preview starts from the saved look (spec 0009, AC-11).
+      templateId: resolveTemplateId(resume.templateId, id),
+      linkStyle: resolveLinkStyle(resume.linkStyle, id),
     };
   });
 }

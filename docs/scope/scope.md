@@ -26,6 +26,7 @@ _These are recommendations to keep your build orderly, not requirements. Skip an
 | 6 | Import an existing resume into the editor | Slice 4 | in-progress |
 | 7 | PDF export | Slice 5 | in-progress |
 | 8 | Resume viewer & ATS templates | Slice 5 | in-progress |
+| 9 | Editor live preview | Slice 5 | in-progress |
 
 ## Already built
 
@@ -158,11 +159,23 @@ spec [0008](../specs/0008-pdf-export/index.md) · code in `components/resume/vie
   - [ ] Cross browser print checks against the viewer: Chrome, Edge, Firefox, Safari, light, dark, phone (AC-1 to AC-12)
 - [ ] Verify it: `/check verify PDF export`
 
+### 9. Editor live preview · in-progress
+Show the ATS sheet inside the editor, following unsaved edits as you type: beside the form on wide screens, behind an Edit / Preview switch on phones, with Template and Links pickers that save at once.
+**Done when:** typing in the editor updates the sheet within about 300 ms (even with invalid input), the layout works at phone and desktop widths, and a template or link pick saves without marking the form dirty or causing a save conflict.
+spec [0009](../specs/0009-editor-live-preview/index.md) · code in `components/resume/editor/`, `components/resume/viewer/choices.tsx`, `lib/resume/form.ts`, `actions/resume.ts` · from spec 0007
+- [x] Design it (spec): `/architect editor live preview`
+- [ ] Build it: `/develop editor live preview`
+  - [x] Loader fields and the side by side preview fed by the debounced form, with fonts and the error boundary (AC-1, AC-3, AC-10, AC-11, AC-14, AC-16)
+  - [x] Lenient preview content and safe links (AC-4, AC-15)
+  - [x] Shared choices file, compact Template and Links pickers saving at once (AC-5, AC-6, AC-7, AC-12, AC-13)
+  - [x] Phone Edit / Preview tabs, the over 2 pages warning, and the exclusions (AC-2, AC-8, AC-9, AC-13)
+  - [ ] Light, dark, phone, tablet, desktop, and slow CPU checks (AC-1 to AC-16)
+- [x] Verify it: `/check verify editor live preview`
+
 ## Deferred
 Out of scope for the current build pass, kept so the plan stays honest.
 - **Real payments**: Buy charges and adds credits to the balance · needs a decision · GA
 - **Credit history**: a list of credits bought and used · needs a decision
-- **Live preview in the editor**: show the formatted sheet beside the editor as you type, with the template picker there too · needs a decision · from spec 0007
 - **One click PDF download**: a real file without the print dialog (server side rendering of the same sheet) · needs a decision · from spec 0008
 cl
 ## Legend

@@ -89,8 +89,18 @@ export default async function EditResumePage({ params }: Params) {
     );
   }
 
-  const { title, content, contentUpdatedAt, hasDraft, importNotice, importedFrom, latestImport, hasUploadText } =
-    result.data;
+  const {
+    title,
+    content,
+    contentUpdatedAt,
+    hasDraft,
+    importNotice,
+    importedFrom,
+    latestImport,
+    hasUploadText,
+    templateId,
+    linkStyle,
+  } = result.data;
   const initialBalance = balance.success ? balance.data : null;
 
   if (!content || !contentUpdatedAt) {
@@ -123,6 +133,8 @@ export default async function EditResumePage({ params }: Params) {
       initialBalance={initialBalance}
       initialImportNotice={importNotice}
       importedFrom={importedFrom}
+      initialTemplateId={templateId}
+      initialLinkStyle={linkStyle}
     />
   );
 }

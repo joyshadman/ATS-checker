@@ -29,10 +29,10 @@ type Layout = { blocks: SheetBlock[]; pages: number[][] };
  * The resume as A4 pages. Blocks are rendered once in a hidden box at the page's
  * content width, measured after fonts load, and split into pages by `paginate`.
  */
-export function PaginatedSheet({ content, template, linkStyle, highlight, onPageCount, printable = false }: Props) {
+export function PaginatedSheet({ content, template, linkStyle, highlight, safeLinks, onPageCount, printable = false }: Props) {
   const blocks = useMemo(
-    () => template.blocks(content, { linkStyle, highlight }),
-    [template, content, linkStyle, highlight]
+    () => template.blocks(content, { linkStyle, highlight, safeLinks }),
+    [template, content, linkStyle, highlight, safeLinks]
   );
   const contentWidth = PAGE_WIDTH - 2 * template.margin;
   const pageHeight = PAGE_HEIGHT - 2 * template.margin;
@@ -88,8 +88,8 @@ export function PaginatedSheet({ content, template, linkStyle, highlight, onPage
   // Turning the highlight off only removes <mark> padding, so blocks can only shrink and
   // the measured page assignment still fits (spec 0008).
   const printBlocks = useMemo(
-    () => (printable ? template.blocks(content, { linkStyle, highlight: false }) : null),
-    [printable, template, content, linkStyle]
+    () => (printable ? template.blocks(content, { linkStyle, highlight: false, safeLinks }) : null),
+    [printable, template, content, linkStyle, safeLinks]
   );
 
   useEffect(() => {

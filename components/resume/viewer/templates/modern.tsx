@@ -21,7 +21,7 @@ import {
 // gray dates. Built from the spec 0007 description; spacing follows Classic's rhythm.
 
 function blocks(content: ResumeContent, options: SheetOptions) {
-  const { highlight, linkStyle } = options;
+  const { highlight } = options;
   const text = (value: string) => <Placeholders text={value} highlight={highlight} />;
   const rest = (parts: (string | undefined)[]) =>
     parts.filter((p): p is string => !!p).map((p, i) => <span key={i}>, {text(p)}</span>);
@@ -77,7 +77,7 @@ function blocks(content: ResumeContent, options: SheetOptions) {
           <>
             <strong className="font-semibold">{text(p.name)}</strong>
             {rest([p.role])}
-            {p.url && <>, <SheetLink link={{ label: p.name, url: p.url }} style={linkStyle} /></>}
+            {p.url && <>, <SheetLink link={{ label: p.name, url: p.url }} options={options} /></>}
           </>
         }
         right={dates(formatRange(p))}
@@ -97,7 +97,7 @@ function blocks(content: ResumeContent, options: SheetOptions) {
           <>
             <strong className="font-semibold">{text(c.name)}</strong>
             {rest([c.issuer])}
-            {c.url && <>, <SheetLink link={{ label: c.name, url: c.url }} style={linkStyle} /></>}
+            {c.url && <>, <SheetLink link={{ label: c.name, url: c.url }} options={options} /></>}
           </>
         }
         right={c.date ? dates(certificationDate(c)) : undefined}

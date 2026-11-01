@@ -22,7 +22,7 @@ import {
 const SEP = " | ";
 
 function blocks(content: ResumeContent, options: SheetOptions) {
-  const { highlight, linkStyle } = options;
+  const { highlight } = options;
   const text = (value: string) => <Placeholders text={value} highlight={highlight} />;
   const rest = (parts: (string | undefined)[]) =>
     parts.filter((p): p is string => !!p).map((p, i) => <span key={i}>{SEP}{text(p)}</span>);
@@ -72,7 +72,7 @@ function blocks(content: ResumeContent, options: SheetOptions) {
           <>
             <strong className="font-bold">{text(p.name)}</strong>
             {rest([p.role])}
-            {p.url && <>{SEP}<SheetLink link={{ label: p.name, url: p.url }} style={linkStyle} /></>}
+            {p.url && <>{SEP}<SheetLink link={{ label: p.name, url: p.url }} options={options} /></>}
           </>
         }
         right={<DateText>{formatRange(p)}</DateText>}
@@ -92,7 +92,7 @@ function blocks(content: ResumeContent, options: SheetOptions) {
           <>
             <strong className="font-bold">{text(c.name)}</strong>
             {rest([c.issuer])}
-            {c.url && <>{SEP}<SheetLink link={{ label: c.name, url: c.url }} style={linkStyle} /></>}
+            {c.url && <>{SEP}<SheetLink link={{ label: c.name, url: c.url }} options={options} /></>}
           </>
         }
         right={c.date ? <DateText>{certificationDate(c)}</DateText> : undefined}

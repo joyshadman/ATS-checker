@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { setResumeAppearance } from "@/actions/resume";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { useToast } from "@/components/ui/toast";
+import { ChoiceGroup, SheetArea, useSavedChoice } from "@/components/resume/viewer/choices";
 import { ResumeSheet } from "@/components/resume/viewer/resume-sheet";
 import { PdfDownloadButton } from "@/components/resume/viewer/pdf-download-button";
 import { usePrintTitle } from "@/components/resume/viewer/use-print-title";
@@ -23,46 +23,6 @@ type Props = {
   /** The draft's Accept and Discard buttons, shown above the draft sheet. */
   draftActions?: ReactNode;
 };
-
-/**
- * A setting saved optimistically (AC-3, AC-4, AC-11): it shows at once, goes back to
- * the last confirmed value if the newest save fails, and a late answer for an older
- * pick never overrides a newer one.
- */
-function useSavedChoice<T extends string>(initial: T, persist: (value: T) => Promise<boolean>, failure: string) {
-  const { toast } = useToast();
-  const [shown, setShown] = useState(initial);
-  const [pending, setPending] = useState(false);
-  const state = useRef({ latest: 0, confirmed: 0, saved: initial, latestSettled: true });
-
-  async function choose(value: T) {
-    const s = state.current;
-    const ticket = ++s.latest;
-    s.latestSettled = false;
-    setShown(value);
-    setPending(true);
-
-    const ok = await persist(value).catch(() => false);
-    if (ok && ticket > s.confirmed) {
-      s.confirmed = ticket;
-      s.saved = value;
-    }
-
-    if (ticket === s.latest) {
-      s.latestSettled = true;
-      setPending(false);
-      if (!ok) {
-        setShown(s.saved);
-        toast(failure, "error");
-      }
-    } else if (ok && s.latestSettled && ticket === s.confirmed) {
-      // The newest pick already failed and reverted; this older one is what the server holds.
-      setShown(s.saved);
-    }
-  }
-
-  return [shown, choose, pending] as const;
-}
 
 export function ResumeViewer({ resumeId, content, draft, initialTemplateId, initialLinkStyle, draftActions }: Props) {
   const [templateId, chooseTemplate, savingTemplate] = useSavedChoice<TemplateId>(
@@ -166,94 +126,6 @@ export function ResumeViewer({ resumeId, content, draft, initialTemplateId, init
           </CardContent>
         </Card>
       )}
-    </div>
-  );
-}
-
-/** The muted desk the white pages sit on, with the over two pages warning (AC-17). */
-function SheetArea({ pageCount, children }: { pageCount: number | null; children: ReactNode }) {
-  return (
-    <div className="space-y-4">
-      <div role="status">
-        {pageCount !== null && pageCount > 2 && (
-          <p className="rounded-xl border border-warning/25 bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
-            Your resume runs past 2 pages. Most recruiters expect 1 to 2.
-          </p>
-        )}
-      </div>
-      <div className="rounded-xl bg-surface/60 border border-border/60 p-3 sm:p-6">{children}</div>
-    </div>
-  );
-}
-
-type Choice<T extends string> = { id: T; name: string; line: string };
-
-/** A radio group of option cards; arrow keys move and select within the group. */
-function ChoiceGroup<T extends string>({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string;
-  options: Choice<T>[];
-  value: T;
-  onChange: (value: T) => void;
-}) {
-  const refs = useRef<(HTMLButtonElement | null)[]>([]);
-  const labelId = `choice-${label.toLowerCase()}`;
-
-  function onKeyDown(event: KeyboardEvent, index: number) {
-    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
-    if (!step) return;
-    event.preventDefault();
-    const next = (index + step + options.length) % options.length;
-    refs.current[next]?.focus();
-    if (options[next].id !== value) onChange(options[next].id);
-  }
-
-  return (
-    <div>
-      <p id={labelId} className="text-xs font-medium text-muted uppercase tracking-wider mb-2">
-        {label}
-      </p>
-      <div role="radiogroup" aria-labelledby={labelId} className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-        {options.map((option, i) => {
-          const selected = option.id === value;
-          return (
-            <button
-              key={option.id}
-              ref={(el) => {
-                refs.current[i] = el;
-              }}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              tabIndex={selected ? 0 : -1}
-              onClick={() => !selected && onChange(option.id)}
-              onKeyDown={(e) => onKeyDown(e, i)}
-              className={`text-left rounded-xl border px-4 py-3 min-h-11 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
-                selected
-                  ? "border-accent bg-accent/10 shadow-sm"
-                  : "border-border/60 bg-surface/60 hover:bg-card-hover hover:border-border"
-              }`}
-            >
-              <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <span
-                  aria-hidden="true"
-                  className={`inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border ${
-                    selected ? "border-accent" : "border-muted/60"
-                  }`}
-                >
-                  {selected && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
-                </span>
-                {option.name}
-              </span>
-              <span className="mt-1 block text-xs text-muted leading-relaxed">{option.line}</span>
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }

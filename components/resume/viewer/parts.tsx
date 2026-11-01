@@ -18,7 +18,12 @@ export type SheetBlock = {
   node: ReactNode;
 };
 
-export type SheetOptions = { linkStyle: LinkStyle; highlight: boolean };
+export type SheetOptions = {
+  linkStyle: LinkStyle;
+  highlight: boolean;
+  /** Only http(s) URLs become links; for unvalidated editor content (spec 0009, AC-15). */
+  safeLinks?: boolean;
+};
 
 export type TemplateModule = {
   blocks: (content: ResumeContent, options: SheetOptions) => SheetBlock[];
@@ -55,10 +60,21 @@ export function Placeholders({ text, highlight }: { text: string; highlight: boo
   );
 }
 
-export function SheetLink({ link, style }: { link: { label: string; url: string }; style: LinkStyle }) {
+function isWebUrl(url: string): boolean {
+  try {
+    const { protocol } = new URL(url);
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+export function SheetLink({ link, options }: { link: { label: string; url: string }; options: SheetOptions }) {
+  const label = linkText(link, options.linkStyle);
+  if (options.safeLinks && !isWebUrl(link.url)) return <span>{label}</span>;
   return (
     <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-inherit no-underline">
-      {linkText(link, style)}
+      {label}
     </a>
   );
 }
@@ -96,12 +112,13 @@ export function joinNodes(nodes: ReactNode[], separator: string): ReactNode[] {
 }
 
 /** Email, phone, location, then each contact link in the chosen style. */
-export function contactItems(contact: ResumeContent["contact"], { linkStyle, highlight }: SheetOptions): ReactNode[] {
+export function contactItems(contact: ResumeContent["contact"], options: SheetOptions): ReactNode[] {
+  const { highlight } = options;
   return [
     contact.email,
     contact.phone,
     contact.location ? <Placeholders text={contact.location} highlight={highlight} /> : undefined,
-    ...contact.links.map((link) => <SheetLink key={link.id} link={link} style={linkStyle} />),
+    ...contact.links.map((link) => <SheetLink key={link.id} link={link} options={options} />),
   ];
 }
 

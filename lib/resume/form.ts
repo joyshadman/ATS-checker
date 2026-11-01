@@ -160,6 +160,82 @@ export function toContent(form: ResumeForm): unknown {
   };
 }
 
+// Long enough for any valid field (the schema caps are lower), short enough that a
+// huge paste cannot stall the preview's layout.
+const PREVIEW_MAX_CHARS = 2000;
+
+/**
+ * The form as sheet content for the editor preview when it does not pass the schema
+ * (spec 0009, AC-4). Never throws. Unlike the schema's normalize, blank values stay ""
+ * instead of being dropped, so the templates never meet an undefined label or URL.
+ * Never used for saving.
+ */
+export function toPreviewContent(form: ResumeForm): ResumeContent {
+  const t = (v: string | null | undefined) => (v ?? "").trim().slice(0, PREVIEW_MAX_CHARS);
+  const texts = (bullets: BulletForm[] = []) => bullets.map((b) => t(b.value)).filter(Boolean);
+  const entries = <T extends Record<string, unknown>>(list: T[] = []) => list.filter(entryCounts);
+  const dates = (e: DatedForm) => ({
+    start: t(e.start),
+    end: e.current ? undefined : t(e.end),
+    current: !!e.current,
+  });
+  const contact = form.contact ?? { fullName: "", email: "", phone: "", location: "", links: [] };
+
+  return {
+    schemaVersion: CURRENT_SCHEMA_VERSION,
+    contact: {
+      fullName: t(contact.fullName),
+      email: t(contact.email),
+      phone: t(contact.phone),
+      location: t(contact.location),
+      links: (contact.links ?? [])
+        .map((l) => ({ id: l.id, label: t(l.label), url: t(l.url) }))
+        .filter((l) => l.label || l.url),
+    },
+    summary: t(form.summary),
+    experience: entries(form.experience).map((e) => ({
+      id: e.id,
+      title: t(e.title),
+      company: t(e.company),
+      location: t(e.location),
+      ...dates(e),
+      bullets: texts(e.bullets),
+    })),
+    education: entries(form.education).map((e) => ({
+      id: e.id,
+      school: t(e.school),
+      degree: t(e.degree),
+      field: t(e.field),
+      location: t(e.location),
+      ...dates(e),
+      bullets: texts(e.bullets),
+    })),
+    skills: entries(form.skills)
+      .map((g) => ({ id: g.id, category: t(g.category), items: splitSkills(t(g.itemsText)) }))
+      .filter((g) => g.items.length > 0),
+    projects: entries(form.projects).map((p) => ({
+      id: p.id,
+      name: t(p.name),
+      role: t(p.role),
+      url: t(p.url),
+      ...dates(p),
+      bullets: texts(p.bullets),
+    })),
+    certifications: entries(form.certifications).map((c) => ({
+      id: c.id,
+      name: t(c.name),
+      issuer: t(c.issuer),
+      date: t(c.date),
+      url: t(c.url),
+    })),
+    languages: entries(form.languages).map((l) => ({
+      id: l.id,
+      language: t(l.language),
+      proficiency: t(l.proficiency),
+    })),
+  };
+}
+
 // ───── Validation ─────
 
 const FIELD_ARRAYS = new Set([
