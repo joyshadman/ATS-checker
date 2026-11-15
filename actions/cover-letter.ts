@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma/db";
 import { parseResumeFile } from "@/lib/parser/resume-parser";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MESSAGE } from "@/lib/upload-limits";
 import { revalidatePath } from "next/cache";
 import { withAction } from "@/lib/action-helpers";
 import type { ActionResult } from "@/types";
@@ -42,9 +43,9 @@ export async function uploadCoverLetter(formData: FormData): Promise<ActionResul
       throw new Error("Invalid file type. Please upload a PDF, DOCX, or TXT file.");
     }
 
-    const maxSize = 10 * 1024 * 1024;
+    const maxSize = MAX_UPLOAD_BYTES;
     if (file.size > maxSize) {
-      throw new Error("File size must be less than 10MB");
+      throw new Error(MAX_UPLOAD_MESSAGE);
     }
 
     const { text } = await parseResumeFile(file);

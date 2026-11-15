@@ -2,7 +2,7 @@
 
 ## Overview
 
-Turns an uploaded resume or cover letter (`File` from FormData) into plain text. Supports PDF, DOCX, and TXT up to 10 MB; anything else throws.
+Turns an uploaded resume or cover letter (`File` from FormData) into plain text. Supports PDF, DOCX, and TXT up to 4 MB; anything else throws.
 
 ## Key files
 
@@ -20,6 +20,7 @@ Turns an uploaded resume or cover letter (`File` from FormData) into plain text.
 
 - `pdfjs-dist` is not a direct dependency in `package.json`; it arrives through `pdf-parse`. Removing `pdf-parse` breaks PDF upload unless you add `pdfjs-dist` directly.
 - `pdfjs-dist` must stay in `serverExternalPackages` in `next.config.ts`.
+- The 4 MB cap lives in `lib/upload-limits.ts` and is shared with the upload forms; `next.config.ts` raises the Server Action body limit to `4mb` to match. Vercel rejects request bodies over 4.5 MB, so a bigger cap needs a different upload path, not just a bigger number.
 - The file defines a small `DOMMatrix` polyfill and preloads the pdf worker into `globalThis.pdfjsWorker`. Both work around Turbopack server bundling failures (`DOMMatrix is not defined`, unresolvable worker import). Don't remove them without testing a PDF upload.
 
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._

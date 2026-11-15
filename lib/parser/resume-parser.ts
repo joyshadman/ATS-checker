@@ -1,11 +1,11 @@
 import mammoth from "mammoth";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MESSAGE } from "@/lib/upload-limits";
 
 export async function parseResumeFile(
   file: File
 ): Promise<{ text: string; fileName: string }> {
-  const maxSize = 10 * 1024 * 1024;
-  if (file.size > maxSize) {
-    throw new Error("File size exceeds 10 MB limit");
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new Error(MAX_UPLOAD_MESSAGE);
   }
 
   const fileName = file.name;

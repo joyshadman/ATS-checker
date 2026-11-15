@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { uploadResume } from "@/actions/resume";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from "@/lib/upload-limits";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -23,6 +24,10 @@ export function ResumeUploadForm() {
   const validateFile = useCallback((f: File) => {
     if (!VALID_TYPES.includes(f.type) && !f.name.endsWith(".txt")) {
       setError("Only PDF, DOCX, and TXT files are supported");
+      return false;
+    }
+    if (f.size > MAX_UPLOAD_BYTES) {
+      setError(`File is too large. Maximum size is ${MAX_UPLOAD_MB} MB`);
       return false;
     }
     return true;
@@ -137,7 +142,7 @@ export function ResumeUploadForm() {
               or drag and drop
             </p>
             <p className="text-xs text-muted/70">
-              PDF, DOCX, or TXT (max 10MB)
+              PDF, DOCX, or TXT (max {MAX_UPLOAD_MB}MB)
             </p>
           </div>
         )}

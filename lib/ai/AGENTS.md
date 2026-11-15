@@ -11,6 +11,8 @@ Every AI call in the app goes through `callAI<T>()` here. It talks to OpenRouter
 | `lib/ai/client.ts` | `callAI<T>(system, user, dedupKey?, options?)`, caching, dedup, retries, error mapping, JSON parsing |
 | `lib/ai/models.ts` | `getAIModel()`, reads `OPENROUTER_MODEL` (throws if unset) |
 | `lib/ai/prompts.ts` | `compressText()`, trims prompts before they are sent |
+| `lib/ai/credits.ts` | `reserveAiUse`, `refundAiUse`, `getAiBalance`: the credit ledger (spec 0004), one SQL statement per write, never a transaction |
+| `lib/ai/credits-shared.ts` | `AI_FREE_USES` (5), `AiBalanceView`, and the one wording of a balance, safe in the browser |
 | `lib/prompts/*.ts` | The system and user prompt builders per feature (ats, job match, improve, interview) |
 | `app/api/ai-test/route.ts` | Standalone GET/POST smoke test route with its own copy of the fetch logic |
 
@@ -22,6 +24,7 @@ Every AI call in the app goes through `callAI<T>()` here. It talks to OpenRouter
 - Prompts are compressed before sending: system to 4000 chars, user to 16000 chars.
 - `callAI` takes an optional fourth `options` argument (`maxTokens`, `timeoutMs`, `retries`, `compress`), spec 0006. Absent fields keep the defaults above. `retries: 0` means one attempt; `compress: false` sends the prompts as given. `options` is not part of the cache key, so vary the prompt or dedup key when you need a fresh answer.
 - A provider answer cut off by `max_tokens` (`finish_reason: "length"`) returns `INVALID_RESPONSE` with "The AI answer was too long. Try again.", not a JSON parse error.
+- AI work that costs a use reserves before the call and refunds on failure, so a provider error never spends a use. Each user gets `AI_FREE_USES` (5) free uses before credits.
 
 ## Gotchas
 
